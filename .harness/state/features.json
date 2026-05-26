@@ -2,7 +2,7 @@
   "_readme": "只允许把 passes 从 false 改成 true。禁止删除条目或修改 description。违反视为严重错误。",
   "_project": "AgentDeck",
   "_sprint": "Phase 1 — MVP",
-  "_updated": "2026-05-26T18:30",
+  "_updated": "2026-05-27T00:00",
   "features": [
     {
       "id": "feat-001",
@@ -44,7 +44,7 @@
         "feat-001",
         "feat-002"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "feat-006",
@@ -54,7 +54,7 @@
         "feat-003",
         "feat-002"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "feat-007",
