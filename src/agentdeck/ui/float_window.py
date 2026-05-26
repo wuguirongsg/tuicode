@@ -74,6 +74,8 @@ class TitleBar(Widget):
 
     def on_mouse_down(self, event: events.MouseDown) -> None:
         if event.button == 1:
+            if isinstance(self.parent, FloatWindow):
+                self.parent._bring_to_top()
             self._dragging = True
             self.capture_mouse()   # 鼠标移出标题栏仍继续接收事件
             event.stop()
@@ -98,7 +100,7 @@ class ResizeHandle(Widget):
             self.dh = dh
 
     DEFAULT_CSS = """
-    ResizeHandle { width: 1; height: 1; color: $text-muted; }
+    ResizeHandle { width: 3; height: 1; color: $text-muted; }
     """
 
     def __init__(self, **kwargs) -> None:
@@ -106,7 +108,7 @@ class ResizeHandle(Widget):
         self._drag_start: Offset | None = None
 
     def render(self) -> str:
-        return "◢"
+        return " ◢ "
 
     def on_mouse_down(self, event: events.MouseDown) -> None:
         if event.button == 1:
@@ -208,14 +210,16 @@ class FloatWindow(Widget):
         self._saved_x = self._win_x
         self._saved_y = self._win_y
 
-    def on_mouse_down(self, event: events.MouseDown) -> None:
-        """点击时将本窗口提升到最顶层（z 排序）。"""
+    def _bring_to_top(self) -> None:
         try:
             wins = [c for c in self.parent.children if isinstance(c, FloatWindow)]
             if len(wins) > 1 and wins[-1] is not self:
                 self.parent.move_child(self, after=wins[-1])
         except Exception:
             pass
+
+    def on_mouse_down(self, event: events.MouseDown) -> None:
+        self._bring_to_top()
 
     # ── 拖动 ──────────────────────────────────────────────────────────────────
 
