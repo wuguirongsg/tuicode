@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-27 02:00] FIX PtyTerminal 焦点修复：on_click 获焦 + Ctrl+` 快捷键 + 聚焦蓝边框高亮
+
 [2026-05-27 01:30] DONE feat-007 底部 bash 终端（PtyTerminal + TerminalStrip），PTY+pyte+add_reader，11 测试通过，91 总测试无回归
 
 [2026-05-27 00:30] FIX 浮窗边框回退直角：round 圆角字符与标题栏对齐偏差，恢复 solid
