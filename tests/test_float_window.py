@@ -288,8 +288,9 @@ class TestFloatWorkspace:
                 w1 = await ws.open_window(FloatWindow("A"))
                 w2 = await ws.open_window(FloatWindow("B"))
                 await pilot.pause()
-                assert w2._win_x > w1._win_x
-                assert w2._win_y > w1._win_y
+                # _win_y 是 offset 值（含 stack_y 补偿），比较实际渲染区域
+                assert w2.region.x > w1.region.x
+                assert w2.region.y > w1.region.y
 
         asyncio.run(run())
 

@@ -8,7 +8,13 @@ from agentdeck.ui.float_window import FloatWindow
 
 
 class FloatWorkspace(Widget):
-    """浮窗工作区 — 承载 FloatWindow 实例，支持 cascade 开窗。"""
+    """浮窗工作区 — 承载 FloatWindow 实例，支持 cascade 开窗。
+
+    定位原理：
+      Textual 的 offset 相对于 widget 在垂直堆叠布局中的自然位置。
+      open_window() 计算 stack_y（前序窗口高度之和）并补偿到 _win_y，
+      使每个窗口视觉上出现在期望的 cascade 坐标。
+    """
 
     _STAGGER_X = 4
     _STAGGER_Y = 2
@@ -42,9 +48,18 @@ class FloatWorkspace(Widget):
         )
 
     async def open_window(self, window: FloatWindow) -> FloatWindow:
-        """挂载浮窗到工作区，自动 cascade 初始位置。"""
-        window._win_x = self._next_x
-        window._win_y = self._next_y
+        """挂载浮窗到工作区，cascade 级联定位，补偿垂直堆叠偏移。"""
+        # 计算已有窗口占用的垂直布局高度（堆叠补偿量）
+        stack_y = sum(w._win_h for w in self._windows)
+
+        desired_x = self._next_x
+        desired_y = self._next_y
+
+        # _win_y = offset 值 = desired_y - stack_y，使 actual_y = desired_y
+        window._win_x   = desired_x
+        window._win_y   = desired_y - stack_y
+        window._stack_y = stack_y
+
         self._next_x += self._STAGGER_X
         self._next_y += self._STAGGER_Y
         if self._next_y > 8:
