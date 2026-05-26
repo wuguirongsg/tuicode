@@ -1,0 +1,92 @@
+{
+  "_readme": "只允许把 passes 从 false 改成 true。禁止删除条目或修改 description。违反视为严重错误。",
+  "_project": "AgentDeck",
+  "_sprint": "Phase 1 — MVP",
+  "_updated": "2026-05-26T18:30",
+  "features": [
+    {
+      "id": "feat-001",
+      "description": "应用骨架与混合布局容器 — Textual App 主入口，建立左主区（浮窗工作区）/右栏（工具栏）/底部栏（运行终端）三段栅格",
+      "acceptance": "运行 `python -m agentdeck` 启动后可见三段布局，状态栏显示版本号，Ctrl+Q 退出不报错",
+      "depends_on": [],
+      "passes": true
+    },
+    {
+      "id": "feat-002",
+      "description": "事件总线 — 实现 FileOpened / FileModified / CursorMoved / SelectionChanged / TerminalOutput / AgentMessage / ToolCallRequested / GitStatusChanged 八种核心事件的发布订阅",
+      "acceptance": "任何模块可 publish 事件，订阅方按注册顺序收到；单元测试覆盖 8 种事件的发布订阅与取消订阅路径",
+      "depends_on": [],
+      "passes": false
+    },
+    {
+      "id": "feat-003",
+      "description": "浮窗管理器 — 浮窗基类支持拖动标题栏、拖右下角缩放、最小化/最大化/关闭按钮（macOS 风格红黄绿），焦点窗口蓝边框高亮",
+      "acceptance": "可同时打开 3 个浮窗，鼠标拖动、缩放、最大化、关闭按预期工作；焦点切换时边框颜色正确更新",
+      "depends_on": ["feat-001"],
+      "passes": false
+    },
+    {
+      "id": "feat-004",
+      "description": "窗口任务栏与快切 — 浮窗区顶部固定任务栏列出所有打开的工作窗口，Alt+1/2/3 快速切换并置顶",
+      "acceptance": "打开 3 个浮窗后任务栏显示 3 项；Alt+2 将第 2 个浮窗置顶并获得焦点；关闭窗口后任务栏同步移除",
+      "depends_on": ["feat-003"],
+      "passes": false
+    },
+    {
+      "id": "feat-005",
+      "description": "文件树（右栏 files Tab）— 只读浏览项目目录，支持展开/折叠，回车在编辑器浮窗中打开文件",
+      "acceptance": "启动后右栏显示项目根目录树；点击目录展开/折叠；回车文件在编辑器浮窗中打开内容",
+      "depends_on": ["feat-001", "feat-002"],
+      "passes": false
+    },
+    {
+      "id": "feat-006",
+      "description": "编辑器浮窗 — 基于 Textual TextArea，支持打开/保存/关闭单个文件，Ctrl+S 保存触发 FileModified 事件",
+      "acceptance": "可打开 utils.py、修改内容、Ctrl+S 保存后磁盘内容更新且 FileModified 事件被发布；关闭浮窗有未保存提示",
+      "depends_on": ["feat-003", "feat-002"],
+      "passes": false
+    },
+    {
+      "id": "feat-007",
+      "description": "底部 bash 终端 — PTY + pyte 实现单标签 bash 会话，支持 ANSI 渲染、Ctrl+C 透传、终端尺寸自动 TIOCSWINSZ 通知子进程",
+      "acceptance": "在底部终端跑 `ls --color`、`top`（按 q 退出）、`vim`（:q 退出）均能正确显示与退出；Ctrl+C 能终止 `sleep 10`",
+      "depends_on": ["feat-001"],
+      "passes": false
+    },
+    {
+      "id": "feat-008",
+      "description": "智能体终端浮窗 — 通用 PTY 浮窗组件，可承载任意 CLI 智能体子进程，输入输出流式渲染",
+      "acceptance": "浮窗内启动一个 bash，输入输出工作正常；浮窗可与编辑器浮窗并存且互不干扰焦点",
+      "depends_on": ["feat-003"],
+      "passes": false
+    },
+    {
+      "id": "feat-009",
+      "description": "AgentAdapter Protocol — 定义 agent_id / display_name / start_session / send_message / stream_response / handle_tool_call / stop_session 接口",
+      "acceptance": "Protocol 完整定义，含 typing.Protocol 标注；有一个 mock 实现通过类型检查（mypy / pyright）",
+      "depends_on": [],
+      "passes": false
+    },
+    {
+      "id": "feat-010",
+      "description": "Claude Code 适配器 — 通过 subprocess + stdio 与 claude CLI 通信，实现 AgentAdapter Protocol，支持流式响应解析",
+      "acceptance": "在智能体浮窗内启动 Claude Code 适配器并发送一条消息，能流式收到响应并渲染；工具调用请求转为 ToolCallRequested 事件",
+      "depends_on": ["feat-008", "feat-009", "feat-002"],
+      "passes": false
+    },
+    {
+      "id": "feat-011",
+      "description": "极简上下文聚合器 — 订阅事件总线维护「当前活动文件路径 + 选区 + 最近 10 条 diff」，提供 get_context() 同步查询接口",
+      "acceptance": "编辑器选中一段代码后，聚合器的 get_context() 返回该文件路径、选区文本和当前 git 状态摘要",
+      "depends_on": ["feat-002"],
+      "passes": false
+    },
+    {
+      "id": "feat-012",
+      "description": "工具调用审批 UI — 收到 ToolCallRequested 事件后弹出审批对话框，展示工具名 + 参数预览 + 批准/拒绝按钮（write_file 类操作显示 diff）",
+      "acceptance": "Claude Code 请求 write_file 时弹出审批框、可看 diff、按 y 批准后文件写入、按 n 拒绝则不写入；结果回传给 Adapter",
+      "depends_on": ["feat-010", "feat-006"],
+      "passes": false
+    }
+  ]
+}
