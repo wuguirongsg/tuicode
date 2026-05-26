@@ -110,7 +110,7 @@ class PtyTerminal(Widget):
     }
     """
 
-    CAN_FOCUS = True
+    can_focus = True   # Textual 8.x 用小写，CAN_FOCUS 已废弃
 
     def __init__(self, shell: str = "/bin/bash", **kwargs: object) -> None:
         super().__init__(**kwargs)
@@ -121,32 +121,41 @@ class PtyTerminal(Widget):
         self._pyte_stream: pyte.ByteStream | None = None
         self._cols = 80
         self._rows = 24
+        self._focus_requested = False
 
     # ── 生命周期 ───────────────────────────────────────────────────────────────
 
     async def on_mount(self) -> None:
-        size = self.size
-        self._cols = max(size.width, 10)
-        self._rows = max(size.height, 4)
+        # 用默认尺寸初始化 pyte；on_resize 会在布局确定后纠正到真实尺寸
         self._init_pyte(self._cols, self._rows)
         await self._start_pty()
+        self._focus_requested = True  # 标记：下次 on_resize 后请求焦点
 
     async def _start_pty(self) -> None:
         master_fd, slave_fd = os.openpty()
         self._master_fd = master_fd
         self._set_pty_size(self._cols, self._rows)
 
+        slave_name = os.ttyname(slave_fd)
+        os.close(slave_fd)  # 父进程不持有 slave，由子进程按名打开
+
+        def _child_setup() -> None:
+            os.setsid()
+            # 按名打开 slave：会话领导者首次 open 终端 → 自动成为控制终端
+            # 这样 line discipline 才能把 \x03 转换成 SIGINT 发给前台进程组
+            fd = os.open(slave_name, os.O_RDWR)
+            os.dup2(fd, 0)
+            os.dup2(fd, 1)
+            os.dup2(fd, 2)
+            if fd > 2:
+                os.close(fd)
+
         self._process = await asyncio.create_subprocess_exec(
             self._shell,
-            stdin=slave_fd,
-            stdout=slave_fd,
-            stderr=slave_fd,
+            preexec_fn=_child_setup,
             env={**os.environ, "TERM": "xterm-256color"},
-            preexec_fn=os.setsid,
         )
-        os.close(slave_fd)
 
-        # 用 add_reader 监听 fd 可读事件，避免阻塞线程
         loop = asyncio.get_event_loop()
         loop.add_reader(master_fd, self._on_pty_readable)
 
@@ -201,16 +210,20 @@ class PtyTerminal(Widget):
     def on_resize(self, event: Resize) -> None:  # type: ignore[override]
         cols = max(event.size.width, 10)
         rows = max(event.size.height, 4)
-        if cols == self._cols and rows == self._rows:
-            return
+        size_changed = (cols != self._cols or rows != self._rows)
         self._cols, self._rows = cols, rows
-        if self._pyte_screen is not None:
+        if self._pyte_screen is not None and size_changed:
             self._pyte_screen.resize(rows, cols)
         self._set_pty_size(cols, rows)
+        # 第一次 resize 时 size 才有效，此时请求焦点
+        if self._focus_requested and self.can_focus:
+            self._focus_requested = False
+            self.focus()
 
     # ── 焦点 ──────────────────────────────────────────────────────────────────
 
-    def on_click(self) -> None:
+
+    def on_mouse_down(self) -> None:
         self.focus()
 
     # ── 键盘输入 ──────────────────────────────────────────────────────────────
@@ -257,5 +270,3 @@ class PtyTerminal(Widget):
             segments.append(Segment(char.data or " ", style))
         return Strip(segments)
 
-    def get_content_height(self, container_size: object, viewport: object, width: int) -> int:  # type: ignore[override]
-        return self._rows

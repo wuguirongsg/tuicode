@@ -43,6 +43,7 @@ class MainContent(Widget):
 
 class AgentDeckApp(App):
     TITLE = "AgentDeck"
+    CTRL_C_EXITS = False  # Ctrl+C 透传给终端，不退出 App；用 Ctrl+Q 退出
 
     BINDINGS = [
         ("ctrl+q", "quit", "退出"),
