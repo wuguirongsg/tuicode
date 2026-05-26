@@ -25,7 +25,7 @@
       "depends_on": [
         "feat-001"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "feat-004",
@@ -34,7 +34,7 @@
       "depends_on": [
         "feat-003"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "feat-005",

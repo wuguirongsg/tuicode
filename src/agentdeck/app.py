@@ -2,6 +2,7 @@ from textual.app import App, ComposeResult
 from textual.widget import Widget
 
 from agentdeck import __version__
+from agentdeck.ui.float_window import FloatWindow
 from agentdeck.ui.menu_bar import MenuBar
 from agentdeck.ui.right_panel import RightPanel
 from agentdeck.ui.status_bar import StatusBar
@@ -43,6 +44,10 @@ class AgentDeckApp(App):
 
     BINDINGS = [
         ("ctrl+q", "quit", "退出"),
+        ("ctrl+t", "test_windows", "[临时] 打开测试浮窗"),
+        ("alt+1", "focus_window(1)", "切换窗口 1"),
+        ("alt+2", "focus_window(2)", "切换窗口 2"),
+        ("alt+3", "focus_window(3)", "切换窗口 3"),
     ]
 
     CSS = """
@@ -55,3 +60,35 @@ class AgentDeckApp(App):
         yield MenuBar()
         yield StatusBar(__version__)
         yield MainContent()
+
+    # ── 任务栏同步 ────────────────────────────────────────────────────────────
+
+    async def on_float_workspace_window_opened(
+        self, msg: FloatWorkspace.WindowOpened
+    ) -> None:
+        await self.query_one(WindowTaskBar).add_window(msg.window)
+
+    async def on_float_window_closed(self, msg: FloatWindow.Closed) -> None:
+        await self.query_one(WindowTaskBar).remove_window(msg.window)
+
+    def on_float_window_minimize_toggled(
+        self, msg: FloatWindow.MinimizeToggled
+    ) -> None:
+        self.query_one(WindowTaskBar).update_window(msg.window)
+
+    # ── Alt+N 快切 ────────────────────────────────────────────────────────────
+
+    def action_focus_window(self, n: int) -> None:
+        win = self.query_one(WindowTaskBar).get_window_at(n)
+        if win is not None:
+            win._bring_to_top()
+            win.restore()
+            win.focus()
+
+    # ── 临时测试 ──────────────────────────────────────────────────────────────
+
+    async def action_test_windows(self) -> None:
+        ws = self.query_one(FloatWorkspace)
+        await ws.open_window(FloatWindow("编辑器 — main.py"))
+        await ws.open_window(FloatWindow("Claude Code"))
+        await ws.open_window(FloatWindow("终端输出"))

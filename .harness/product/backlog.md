@@ -79,3 +79,5 @@
 ### Session 中新发现
 
 （格式：`[YYYY-MM-DD] 描述 — 原因`）
+
+[2026-05-26] Textual `layers` 仅控制 z 渲染顺序，`offset` 始终相对 widget 在垂直布局中的堆叠基准位置 —— 无原生 absolute 定位支持。浮窗真正自由定位需用 stack_y 补偿（当前方案）或将窗口挂载到 Screen 而非子容器（备选）。
