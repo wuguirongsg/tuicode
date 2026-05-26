@@ -79,7 +79,7 @@
       "description": "AgentAdapter Protocol — 定义 agent_id / display_name / start_session / send_message / stream_response / handle_tool_call / stop_session 接口",
       "acceptance": "Protocol 完整定义，含 typing.Protocol 标注；有一个 mock 实现通过类型检查（mypy / pyright）",
       "depends_on": [],
-      "passes": false
+      "passes": true
     },
     {
       "id": "feat-010",
