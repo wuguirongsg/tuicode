@@ -2,6 +2,7 @@ from textual.app import App, ComposeResult
 from textual.widget import Widget
 
 from agentdeck import __version__
+from agentdeck.ui.editor_window import EditorWindow
 from agentdeck.ui.float_window import FloatWindow
 from agentdeck.ui.menu_bar import MenuBar
 from agentdeck.ui.right_panel import RightPanel
@@ -84,6 +85,21 @@ class AgentDeckApp(App):
             win._bring_to_top()
             win.restore()
             win.focus()
+
+    # ── 文件树 → 编辑器 ───────────────────────────────────────────────────────
+
+    async def on_right_panel_file_requested(
+        self, msg: RightPanel.FileRequested
+    ) -> None:
+        # 同一文件已打开则置顶，不重复开窗
+        for win in self.query(EditorWindow):
+            if win._path == msg.path:
+                win._bring_to_top()
+                win.restore()
+                win.focus()
+                return
+        ws = self.query_one(FloatWorkspace)
+        await ws.open_window(EditorWindow(msg.path))
 
     # ── 临时测试 ──────────────────────────────────────────────────────────────
 

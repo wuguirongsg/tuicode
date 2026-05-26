@@ -1,10 +1,22 @@
+"""feat-005 文件树 — 右栏 files Tab，DirectoryTree + FileRequested 消息。"""
+from __future__ import annotations
+
+from pathlib import Path
+
 from textual.app import ComposeResult
+from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Static
+from textual.widgets import DirectoryTree, Static
 
 
 class RightPanel(Widget):
-    """右侧固定工具栏 — files / git / search Tab（feat-005 实现后填充文件树）。"""
+    """右侧固定工具栏 — files Tab 显示项目文件树。"""
+
+    class FileRequested(Message):
+        """用户在文件树中选中文件，通知 App 打开编辑器浮窗。"""
+        def __init__(self, path: Path) -> None:
+            super().__init__()
+            self.path = path
 
     DEFAULT_CSS = """
     RightPanel {
@@ -31,16 +43,24 @@ class RightPanel(Widget):
         color: $accent;
         text-style: bold;
     }
-    RightPanel #rp-content {
+    RightPanel DirectoryTree {
         height: 1fr;
-        color: $text-disabled;
-        content-align: center middle;
-        padding: 1;
+        background: $panel-darken-1;
     }
     """
+
+    def __init__(self, root: Path | str | None = None, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._root = Path(root) if root else Path.cwd()
 
     def compose(self) -> ComposeResult:
         with Widget(id="rp-tabs"):
             yield Static("files", classes="rp-tab-active")
             yield Static("git", classes="rp-tab")
-        yield Static("文件树待实现", id="rp-content")
+        yield DirectoryTree(self._root, id="file-tree")
+
+    def on_directory_tree_file_selected(
+        self, event: DirectoryTree.FileSelected
+    ) -> None:
+        event.stop()
+        self.post_message(self.FileRequested(event.path))
