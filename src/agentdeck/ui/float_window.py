@@ -159,14 +159,14 @@ class FloatWindow(Widget):
     DEFAULT_CSS = """
     FloatWindow {
         layer: floating;
-        border: solid $panel;
+        border: round $panel;
         background: $surface;
         width: 60;
         height: 20;
         overflow: hidden hidden;
     }
     FloatWindow:focus-within {
-        border: solid cornflowerblue;
+        border: round cornflowerblue;
     }
     FloatWindow #win-body {
         height: 1fr;
