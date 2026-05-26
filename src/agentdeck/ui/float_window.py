@@ -213,8 +213,28 @@ class FloatWindow(Widget):
     def _bring_to_top(self) -> None:
         try:
             wins = [c for c in self.parent.children if isinstance(c, FloatWindow)]
-            if len(wins) > 1 and wins[-1] is not self:
-                self.parent.move_child(self, after=wins[-1])
+            if len(wins) <= 1 or wins[-1] is self:
+                return
+            # 记录每个窗口当前的实际视觉 Y（= 垂直堆叠基准 + offset_y）
+            actual_ys: dict[int, int] = {}
+            cumulative = 0
+            for w in wins:
+                actual_ys[id(w)] = cumulative + w._win_y
+                cumulative += w._win_h
+
+            self.parent.move_child(self, after=wins[-1])
+
+            # 新 DOM 顺序：把 self 挪到末尾
+            idx = wins.index(self)
+            new_order = wins[:idx] + wins[idx + 1:] + [self]
+
+            # 用新的堆叠基准重算每个窗口的 offset，保持视觉位置不变
+            cumulative = 0
+            for w in new_order:
+                w._stack_y = cumulative
+                w._win_y   = actual_ys[id(w)] - cumulative
+                w.styles.offset = (w._win_x, w._win_y)
+                cumulative += w._win_h
         except Exception:
             pass
 
