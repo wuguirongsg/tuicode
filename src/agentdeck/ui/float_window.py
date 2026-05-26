@@ -145,6 +145,12 @@ class FloatWindow(Widget):
             super().__init__()
             self.window = window
 
+    class MinimizeToggled(Message):
+        def __init__(self, window: "FloatWindow", is_minimized: bool) -> None:
+            super().__init__()
+            self.window = window
+            self.is_minimized = is_minimized
+
     DEFAULT_WIDTH = 60
     DEFAULT_HEIGHT = 20
     MIN_WIDTH = 20
@@ -246,8 +252,20 @@ class FloatWindow(Widget):
     def on_title_bar_drag_moved(self, message: TitleBar.DragMoved) -> None:
         if self._is_maximized:
             return
-        self._win_x = max(0, self._win_x + message.dx)
-        self._win_y += message.dy
+        ws = self.parent
+        if ws is not None:
+            ws_w, ws_h = ws.size.width, ws.size.height
+            new_x = max(0, min(self._win_x + message.dx, ws_w - 20))
+            # 用 region 推导 natural_y（拖动时 natural_y 不变），再夹住 actual_y
+            cur_actual_y = self.region.y - ws.region.y
+            natural_y = cur_actual_y - self._win_y
+            new_actual_y = max(0, min(cur_actual_y + message.dy, ws_h - 1))
+            new_win_y = new_actual_y - natural_y
+        else:
+            new_x = max(0, self._win_x + message.dx)
+            new_win_y = self._win_y + message.dy
+        self._win_x = new_x
+        self._win_y = new_win_y
         self.styles.offset = (self._win_x, self._win_y)
 
     # ── 缩放 ──────────────────────────────────────────────────────────────────
@@ -265,18 +283,31 @@ class FloatWindow(Widget):
         self.remove()
 
     def on_title_bar_min_clicked(self, message: TitleBar.MinClicked) -> None:
+        if self._is_minimized:
+            self.restore()
+        else:
+            self._minimize()
+
+    def _minimize(self) -> None:
         body   = self.query_one("#win-body")
         footer = self.query_one("#win-footer")
-        if self._is_minimized:
-            body.display        = True
-            footer.display      = True
-            self.styles.height  = self._win_h
-            self._is_minimized  = False
-        else:
-            body.display        = False
-            footer.display      = False
-            self.styles.height  = 3   # top border + title bar + bottom border
-            self._is_minimized  = True
+        body.display       = False
+        footer.display     = False
+        self.styles.height = 3
+        self._is_minimized = True
+        self.post_message(self.MinimizeToggled(self, True))
+
+    def restore(self) -> None:
+        """还原最小化状态（无论当前是否已最小化，均幂等）。"""
+        if not self._is_minimized:
+            return
+        body   = self.query_one("#win-body")
+        footer = self.query_one("#win-footer")
+        body.display       = True
+        footer.display     = True
+        self.styles.height = self._win_h
+        self._is_minimized = False
+        self.post_message(self.MinimizeToggled(self, False))
 
     def on_title_bar_max_clicked(self, message: TitleBar.MaxClicked) -> None:
         if self._is_maximized:

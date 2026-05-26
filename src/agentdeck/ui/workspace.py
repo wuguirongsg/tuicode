@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from textual.app import ComposeResult
+from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static
 
@@ -15,6 +16,11 @@ class FloatWorkspace(Widget):
       open_window() 计算 stack_y（前序窗口高度之和）并补偿到 _win_y，
       使每个窗口视觉上出现在期望的 cascade 坐标。
     """
+
+    class WindowOpened(Message):
+        def __init__(self, window: FloatWindow) -> None:
+            super().__init__()
+            self.window = window
 
     _STAGGER_X = 4
     _STAGGER_Y = 2
@@ -70,6 +76,7 @@ class FloatWorkspace(Widget):
         self.query_one("#ws-hint", Static).display = False
         await self.mount(window)
         window.focus()
+        self.post_message(self.WindowOpened(window))
         return window
 
     def on_float_window_closed(self, message: FloatWindow.Closed) -> None:
