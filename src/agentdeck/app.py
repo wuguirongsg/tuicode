@@ -8,6 +8,7 @@ from agentdeck.ui.menu_bar import MenuBar
 from agentdeck.ui.right_panel import RightPanel
 from agentdeck.ui.status_bar import StatusBar
 from agentdeck.ui.taskbar import WindowTaskBar
+from agentdeck.ui.pty_terminal import PtyTerminal
 from agentdeck.ui.terminal_strip import TerminalStrip
 from agentdeck.ui.workspace import FloatWorkspace
 
@@ -45,6 +46,7 @@ class AgentDeckApp(App):
 
     BINDINGS = [
         ("ctrl+q", "quit", "退出"),
+        ("ctrl+grave_accent", "focus_terminal", "聚焦终端"),
         ("ctrl+t", "test_windows", "[临时] 打开测试浮窗"),
         ("alt+1", "focus_window(1)", "切换窗口 1"),
         ("alt+2", "focus_window(2)", "切换窗口 2"),
@@ -100,6 +102,12 @@ class AgentDeckApp(App):
                 return
         ws = self.query_one(FloatWorkspace)
         await ws.open_window(EditorWindow(msg.path))
+
+    # ── 终端聚焦 ──────────────────────────────────────────────────────────────
+
+    def action_focus_terminal(self) -> None:
+        terminal = self.query_one(PtyTerminal)
+        terminal.focus()
 
     # ── 临时测试 ──────────────────────────────────────────────────────────────
 

@@ -103,6 +103,10 @@ class PtyTerminal(Widget):
         width: 1fr;
         height: 1fr;
         background: #0a0a0a;
+        border: solid $panel-darken-2;
+    }
+    PtyTerminal:focus {
+        border: solid $accent;
     }
     """
 
@@ -203,6 +207,11 @@ class PtyTerminal(Widget):
         if self._pyte_screen is not None:
             self._pyte_screen.resize(rows, cols)
         self._set_pty_size(cols, rows)
+
+    # ── 焦点 ──────────────────────────────────────────────────────────────────
+
+    def on_click(self) -> None:
+        self.focus()
 
     # ── 键盘输入 ──────────────────────────────────────────────────────────────
 
