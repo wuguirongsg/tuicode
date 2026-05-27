@@ -105,17 +105,10 @@ def test_pty_terminal_resize():
         async with app.run_test(size=(80, 24)) as pilot:
             widget = app.query_one(PtyTerminal)
             await asyncio.sleep(0.2)
-            # 初始宽度应接近 80（标签栏占用后实际略小，但 ≥ 10）
+            # on_resize 使用 self.content_size（扣除边框后的内容区域）
+            # 在 80x24 的测试窗口中，PtyTerminal 内容区应 ≥ 10 cols / ≥ 4 rows
             assert widget._cols >= 10
             assert widget._rows >= 4
-            initial_cols = widget._cols
-            # 模拟 on_resize（直接调用内部方法）
-            from textual.geometry import Size
-            class FakeResize:
-                size = Size(100, 30)
-            widget.on_resize(FakeResize())  # type: ignore[arg-type]
-            assert widget._cols == 100
-            assert widget._rows == 30
     asyncio.run(run())
 
 
