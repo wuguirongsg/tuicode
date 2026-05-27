@@ -15,6 +15,10 @@ from rich.style import Style
 from textual.strip import Strip
 from textual.widget import Widget
 
+_DEFAULT_CHAR = pyte.screens.Char(" ")
+_SB_THUMB = Style(color="white")
+_SB_TRACK = Style(color="bright_black")
+
 if TYPE_CHECKING:
     from textual.events import Key, MouseScrollDown, MouseScrollUp, Resize
 
@@ -307,6 +311,22 @@ class PtyTerminal(Widget):
 
     # ── 渲染 ──────────────────────────────────────────────────────────────────
 
+    def _scrollbar_char(self, y: int) -> str | None:
+        """返回第 y 行最右列应显示的滚动条字符；无历史时返回 None。"""
+        screen = self._pyte_screen
+        if screen is None:
+            return None
+        hist_len = len(screen.scrollback)
+        if hist_len == 0:
+            return None
+        total = hist_len + screen.lines
+        rows = screen.lines
+        thumb_h = max(1, rows * rows // total)
+        # view_top: 当前视图顶部在 total 中的绝对行号
+        view_top = total - self._scroll_offset - rows
+        thumb_top = max(0, min(rows - thumb_h, int(view_top * rows / total)))
+        return "█" if thumb_top <= y < thumb_top + thumb_h else "│"
+
     def render_line(self, y: int) -> Strip:
         screen = self._pyte_screen
         if screen is None:
@@ -339,9 +359,14 @@ class PtyTerminal(Widget):
 
         segments: list[Segment] = []
         for x in range(screen.columns):
-            char = row[x]
+            char = row.get(x, _DEFAULT_CHAR)
             style = _char_style(char)
             if show_cursor and screen.cursor.x == x and screen.cursor.y == y:
                 style = style + Style(reverse=True)
             segments.append(Segment(char.data or " ", style))
+
+        sb = self._scrollbar_char(y)
+        if sb is not None:
+            segments[-1] = Segment(sb, _SB_THUMB if sb == "█" else _SB_TRACK)
+
         return Strip(segments)
