@@ -35,9 +35,9 @@ class ConfirmCloseModal(ModalScreen[bool]):
         align: center middle;
     }
     ConfirmCloseModal #modal-box {
-        width: 50;
-        height: 8;
-        border: solid $warning;
+        width: 52;
+        height: 9;
+        border: round $warning;
         background: $surface;
         padding: 1 2;
     }

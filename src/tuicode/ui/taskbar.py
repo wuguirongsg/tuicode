@@ -20,11 +20,11 @@ class TaskButton(Widget):
     TaskButton {
         width: auto;
         height: 1;
-        padding: 0 1;
+        padding: 0 2;
         color: $text-muted;
     }
-    TaskButton:hover { background: $panel; color: $text; }
-    TaskButton.minimized { color: $text-disabled; }
+    TaskButton:hover { background: $surface; color: $text; }
+    TaskButton.minimized { color: $text-disabled; text-style: italic; }
     """
 
     def __init__(self, window: object, **kwargs) -> None:
@@ -57,12 +57,14 @@ class WindowTaskBar(Widget):
     WindowTaskBar {
         height: 1;
         layout: horizontal;
-        background: $panel-darken-2;
+        background: $panel;
         padding: 0 1;
+        border-bottom: solid $panel-lighten-1;
     }
     WindowTaskBar #tb-hint {
         color: $text-disabled;
         width: auto;
+        text-style: italic;
     }
     """
 

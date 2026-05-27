@@ -10,11 +10,12 @@ class StatusBar(Widget):
         dock: bottom;
         height: 1;
         layout: horizontal;
-        background: $accent-darken-3;
+        background: $primary-darken-3;
         padding: 0 1;
     }
     StatusBar #sb-left  { width: 1fr; color: $text-muted; }
     StatusBar #sb-right { width: auto; color: $text-muted; }
+    StatusBar #sb-sep   { width: 1; color: $primary-darken-1; }
     """
 
     agent_count: reactive[int] = reactive(0)
@@ -25,7 +26,8 @@ class StatusBar(Widget):
 
     def compose(self) -> ComposeResult:
         yield Static(id="sb-left")
-        yield Static("Ctrl+Q 退出  Ctrl+? 帮助", id="sb-right")
+        yield Static("│", id="sb-sep")
+        yield Static("^Q 退出  ^` 终端", id="sb-right")
 
     def on_mount(self) -> None:
         self._refresh_left()
@@ -35,7 +37,7 @@ class StatusBar(Widget):
 
     def _refresh_left(self) -> None:
         agents = self.agent_count
-        agent_str = f"● {agents} agent{'s' if agents != 1 else ''}" if agents else "○ 无 agent"
+        agent_str = f"● {agents} agent{'s' if agents != 1 else ''}" if agents else "○ no agents"
         self.query_one("#sb-left", Static).update(
-            f"AgentDeck v{self._version}  {agent_str}"
+            f"TuiCode v{self._version}  {agent_str}"
         )

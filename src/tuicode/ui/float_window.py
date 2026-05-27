@@ -42,8 +42,9 @@ class TitleBar(Widget):
         layout: horizontal;
         background: $panel;
         padding: 0 1;
+        border-bottom: solid $panel-lighten-1;
     }
-    TitleBar #win-title { width: 1fr; color: $text-muted; }
+    TitleBar #win-title { width: 1fr; color: $text-muted; text-align: center; }
     """
 
     def __init__(self, title: str = "", **kwargs) -> None:
@@ -159,14 +160,14 @@ class FloatWindow(Widget):
     DEFAULT_CSS = """
     FloatWindow {
         layer: floating;
-        border: solid $panel;
+        border: round $panel-lighten-1;
         background: $surface;
         width: 60;
         height: 20;
         overflow: hidden hidden;
     }
     FloatWindow:focus-within {
-        border: solid cornflowerblue;
+        border: round $primary;
     }
     FloatWindow #win-body {
         height: 1fr;
@@ -176,6 +177,7 @@ class FloatWindow(Widget):
         height: 1;
         layout: horizontal;
         background: $panel;
+        border-top: solid $panel-lighten-1;
     }
     FloatWindow #footer-spacer { width: 1fr; }
     """

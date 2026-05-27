@@ -28,13 +28,13 @@ class FloatWorkspace(Widget):
     DEFAULT_CSS = """
     FloatWorkspace {
         height: 1fr;
-        background: #0d1117;
+        background: $background;
         overflow: hidden;
         layers: base floating;
     }
     FloatWorkspace #ws-hint {
         layer: base;
-        color: $text-disabled;
+        color: $panel-lighten-2;
         content-align: center middle;
         width: 100%;
         height: 100%;

@@ -67,14 +67,15 @@ class TerminalStrip(Widget):
     DEFAULT_CSS = """
     TerminalStrip {
         height: 14;
-        background: #0a0a0a;
-        border-top: solid $panel-darken-2;
+        background: $background;
+        border-top: solid $panel-lighten-1;
     }
     TerminalStrip #ts-tabs {
         height: 1;
         color: $text-muted;
-        background: $panel-darken-2;
+        background: $panel;
         padding: 0 1;
+        border-bottom: solid $panel-lighten-1;
     }
     TerminalStrip PtyTerminal {
         height: 1fr;

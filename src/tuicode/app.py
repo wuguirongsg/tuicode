@@ -1,4 +1,5 @@
 from textual.app import App, ComposeResult
+from textual.theme import Theme
 from textual.widget import Widget
 
 from tuicode import __version__
@@ -56,9 +57,25 @@ class TuiCodeApp(App):
 
     CSS = """
     Screen {
-        background: #0d1117;
+        background: $background;
     }
     """
+
+    def on_mount(self) -> None:
+        self.register_theme(Theme(
+            name="tuicode",
+            primary="#7c3aed",
+            secondary="#2563eb",
+            accent="#f59e0b",
+            success="#10b981",
+            warning="#f59e0b",
+            error="#ef4444",
+            background="#0f172a",
+            surface="#1e293b",
+            panel="#243347",
+            dark=True,
+        ))
+        self.theme = "tuicode"
 
     def compose(self) -> ComposeResult:
         yield MenuBar()

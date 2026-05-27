@@ -10,14 +10,19 @@ class MenuBar(Widget):
         dock: top;
         height: 1;
         layout: horizontal;
-        background: $panel-darken-1;
+        background: $panel;
         padding: 0 1;
+        border-bottom: solid $panel-lighten-1;
     }
     MenuBar .brand {
         width: auto;
-        padding: 0 1;
-        color: $accent;
+        padding: 0 2;
+        color: $primary;
         text-style: bold;
+    }
+    MenuBar .menu-sep {
+        width: 1;
+        color: $panel-lighten-2;
     }
     MenuBar .menu-item {
         width: auto;
@@ -30,10 +35,11 @@ class MenuBar(Widget):
     }
     """
 
-    _ITEMS: list[str] = ["文件", "编辑", "视图", "智能体", "帮助"]
+    _ITEMS: list[str] = ["File", "Edit", "View", "Agents", "Help"]
 
     def compose(self) -> ComposeResult:
-        yield Static("AgentDeck", classes="brand")
+        yield Static("◈ TUICODE", classes="brand")
+        yield Static("│", classes="menu-sep")
         for label in self._ITEMS:
             yield Static(label, classes="menu-item")
 

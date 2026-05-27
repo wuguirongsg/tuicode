@@ -22,30 +22,34 @@ class RightPanel(Widget):
     RightPanel {
         width: 28;
         height: 1fr;
-        border-left: solid $panel-darken-2;
+        border-left: solid $panel-lighten-1;
         layout: vertical;
-        background: $panel-darken-1;
+        background: $surface;
     }
     RightPanel #rp-tabs {
         height: 1;
-        background: $panel-darken-2;
+        background: $panel;
         layout: horizontal;
         padding: 0 1;
+        border-bottom: solid $panel-lighten-1;
     }
     RightPanel .rp-tab {
         width: auto;
-        padding: 0 1;
+        padding: 0 2;
         color: $text-muted;
+    }
+    RightPanel .rp-tab:hover {
+        color: $text;
     }
     RightPanel .rp-tab-active {
         width: auto;
-        padding: 0 1;
+        padding: 0 2;
         color: $accent;
         text-style: bold;
     }
     RightPanel DirectoryTree {
         height: 1fr;
-        background: $panel-darken-1;
+        background: $surface;
     }
     """
 
