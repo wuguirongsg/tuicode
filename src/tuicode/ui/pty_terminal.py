@@ -44,6 +44,20 @@ def _to_rich_color(color: str | int | None) -> str | None:
         return _ANSI_NAMES[low]
     if low.startswith("#") and len(low) == 7:
         return low
+    # pyte 以不带 # 的 6 位十六进制字符串存储 truecolor（如 "3a7bd5"）
+    if len(low) == 6:
+        try:
+            int(low, 16)
+            return f"#{low}"
+        except ValueError:
+            pass
+    # pyte 某些版本以字符串形式存储 256 色索引（如 "196"）
+    try:
+        n = int(low)
+        if 0 <= n <= 255:
+            return f"color({n})"
+    except ValueError:
+        pass
     return None
 
 
