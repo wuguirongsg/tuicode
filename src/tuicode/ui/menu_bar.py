@@ -3,6 +3,8 @@ from textual.widget import Widget
 from textual.widgets import Static
 from textual.events import Click
 
+from tuicode.i18n import t
+
 
 class MenuBar(Widget):
     DEFAULT_CSS = """
@@ -35,15 +37,13 @@ class MenuBar(Widget):
     }
     """
 
-    _ITEMS: list[str] = ["File", "Edit", "View", "Agents", "Help"]
-
     def compose(self) -> ComposeResult:
         yield Static("◈ TUICODE", classes="brand")
         yield Static("│", classes="menu-sep")
-        for label in self._ITEMS:
-            yield Static(label, classes="menu-item")
+        for key in ("menu.file", "menu.edit", "menu.view", "menu.agents", "menu.help"):
+            yield Static(t(key), classes="menu-item", id=f"mi-{key.split('.')[1]}")
 
     def on_click(self, event: Click) -> None:
         node = event.widget
         if isinstance(node, Static) and "menu-item" in (node.classes or set()):
-            self.app.notify(f"{node.render()}（菜单待实现）")
+            self.app.notify(f"{node.render()}{t('menu.todo')}")

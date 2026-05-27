@@ -3,6 +3,8 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Static
 
+from tuicode.i18n import t
+
 
 class StatusBar(Widget):
     DEFAULT_CSS = """
@@ -27,7 +29,7 @@ class StatusBar(Widget):
     def compose(self) -> ComposeResult:
         yield Static(id="sb-left")
         yield Static("│", id="sb-sep")
-        yield Static("^Q 退出  ^` 终端", id="sb-right")
+        yield Static(t("status.shortcuts"), id="sb-right")
 
     def on_mount(self) -> None:
         self._refresh_left()
@@ -36,8 +38,13 @@ class StatusBar(Widget):
         self._refresh_left()
 
     def _refresh_left(self) -> None:
-        agents = self.agent_count
-        agent_str = f"● {agents} agent{'s' if agents != 1 else ''}" if agents else "○ no agents"
+        n = self.agent_count
+        if n == 0:
+            agent_str = t("status.no_agents")
+        elif n == 1:
+            agent_str = t("status.agents", n=n)
+        else:
+            agent_str = t("status.agents_pl", n=n)
         self.query_one("#sb-left", Static).update(
             f"TuiCode v{self._version}  {agent_str}"
         )

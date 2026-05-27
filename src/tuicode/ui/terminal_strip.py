@@ -5,6 +5,7 @@ from textual.app import ComposeResult
 from textual.widget import Widget
 from textual.widgets import Static
 
+from tuicode.i18n import t
 from tuicode.ui.pty_terminal import PtyTerminal
 
 _MIN_HEIGHT = 5
@@ -32,7 +33,7 @@ class _ResizeHandle(Widget):
 
     def render(self):
         from rich.text import Text
-        return Text("─ ↕ 拖动调整终端高度 ↕ ─", style="dim", justify="center")
+        return Text(t("terminal.drag_hint"), style="dim", justify="center")
 
     def on_mouse_down(self, event: events.MouseDown) -> None:
         strip = self.parent
@@ -84,5 +85,5 @@ class TerminalStrip(Widget):
 
     def compose(self) -> ComposeResult:
         yield _ResizeHandle()
-        yield Static("[bash]  [+]", id="ts-tabs")
+        yield Static(t("terminal.tab_bash"), id="ts-tabs")
         yield PtyTerminal()

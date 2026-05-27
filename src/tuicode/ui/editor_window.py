@@ -10,6 +10,7 @@ from textual.widgets import Button, Static, TextArea
 
 from tuicode.bus import default_bus
 from tuicode.events import FileModified
+from tuicode.i18n import t
 from tuicode.ui.float_window import FloatWindow, TitleBar
 
 _LANG_MAP: dict[str, str] = {
@@ -58,10 +59,10 @@ class ConfirmCloseModal(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="modal-box"):
-            yield Static("文件未保存，确认关闭？", id="modal-msg")
+            yield Static(t("editor.confirm_close"), id="modal-msg")
             with Horizontal(id="modal-buttons"):
-                yield Button("关闭不保存", id="btn-discard", variant="error")
-                yield Button("取消", id="btn-cancel", variant="default")
+                yield Button(t("editor.btn_discard"), id="btn-discard", variant="error")
+                yield Button(t("editor.btn_cancel"), id="btn-cancel", variant="default")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "btn-discard")

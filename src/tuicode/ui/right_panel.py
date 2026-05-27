@@ -8,6 +8,8 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import DirectoryTree, Static
 
+from tuicode.i18n import t
+
 
 class RightPanel(Widget):
     """右侧固定工具栏 — files Tab 显示项目文件树。"""
@@ -59,8 +61,8 @@ class RightPanel(Widget):
 
     def compose(self) -> ComposeResult:
         with Widget(id="rp-tabs"):
-            yield Static("files", classes="rp-tab-active")
-            yield Static("git", classes="rp-tab")
+            yield Static(t("panel.tab_files"), classes="rp-tab-active")
+            yield Static(t("panel.tab_git"), classes="rp-tab")
         yield DirectoryTree(self._root, id="file-tree")
 
     def on_directory_tree_file_selected(

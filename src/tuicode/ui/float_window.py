@@ -8,6 +8,8 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static
 
+from tuicode.i18n import t
+
 
 class WinButton(Static):
     """标题栏控制按钮 — 阻止 MouseDown 冒泡，避免误触发拖动。"""
@@ -209,7 +211,7 @@ class FloatWindow(Widget):
 
     def compose_body(self) -> ComposeResult:
         """子类覆盖此方法提供窗口内容。"""
-        yield Static("(空窗口)")
+        yield Static(t("editor.empty_window"))
 
     def on_mount(self) -> None:
         self.styles.width  = self._win_w

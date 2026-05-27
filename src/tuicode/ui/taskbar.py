@@ -5,6 +5,8 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static
 
+from tuicode.i18n import t
+
 
 class TaskButton(Widget):
     """任务栏单个窗口按钮。"""
@@ -73,7 +75,7 @@ class WindowTaskBar(Widget):
         self._buttons: dict[int, TaskButton] = {}  # id(window) -> TaskButton
 
     def compose(self) -> ComposeResult:
-        yield Static("（无打开窗口）", id="tb-hint")
+        yield Static(t("taskbar.no_windows"), id="tb-hint")
 
     async def add_window(self, window: object) -> None:
         btn = TaskButton(window, id=f"tb-{id(window)}")

@@ -5,6 +5,7 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static
 
+from tuicode.i18n import t
 from tuicode.ui.float_window import FloatWindow
 
 
@@ -48,10 +49,7 @@ class FloatWorkspace(Widget):
         self._windows: list[FloatWindow] = []
 
     def compose(self) -> ComposeResult:
-        yield Static(
-            "浮窗工作区\n\n打开文件或启动智能体会话后，工作窗口将在此区域显示",
-            id="ws-hint",
-        )
+        yield Static(t("workspace.hint"), id="ws-hint")
 
     async def open_window(self, window: FloatWindow) -> FloatWindow:
         """挂载浮窗到工作区，cascade 级联定位，补偿垂直堆叠偏移。"""
