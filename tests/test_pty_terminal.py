@@ -8,7 +8,7 @@ import pyte
 import pytest
 from textual.app import App, ComposeResult
 
-from tuicode.ui.pty_terminal import PtyTerminal, _char_style, _to_rich_color
+from tuicode.ui.pty_terminal import PtyTerminal, _to_rich_color
 
 
 # ── 颜色转换 ──────────────────────────────────────────────────────────────────
@@ -48,18 +48,6 @@ def test_to_rich_color_pyte_256_string():
     assert _to_rich_color("196") == "color(196)"
     assert _to_rich_color("255") == "color(255)"
 
-
-def test_char_style_bold():
-    char = pyte.screens.Char("A", fg="default", bg="default", bold=True)
-    style = _char_style(char)
-    assert style.bold is True
-
-
-def test_char_style_plain():
-    char = pyte.screens.Char("x")
-    style = _char_style(char)
-    assert style.bold is not True
-    assert style.italic is not True
 
 
 # ── PtyTerminal Widget ────────────────────────────────────────────────────────

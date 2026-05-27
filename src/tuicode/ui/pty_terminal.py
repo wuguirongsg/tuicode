@@ -18,6 +18,7 @@ from textual.widget import Widget
 _DEFAULT_CHAR = pyte.screens.Char(" ")
 _SB_THUMB = Style(color="white")
 _SB_TRACK = Style(color="bright_black")
+_TERM_DEFAULT = Style(color="#ffffff", bgcolor="#000000")
 
 if TYPE_CHECKING:
     from textual.events import Key, MouseScrollDown, MouseScrollUp, Resize
@@ -60,19 +61,6 @@ def _to_rich_color(color: str | int | None) -> str | None:
         pass
     return None
 
-
-def _char_style(char: pyte.screens.Char) -> Style:
-    fg = _to_rich_color(char.fg)
-    bg = _to_rich_color(char.bg)
-    return Style(
-        color=fg,
-        bgcolor=bg,
-        bold=char.bold,
-        italic=char.italics,
-        underline=char.underscore,
-        strike=char.strikethrough,
-        reverse=char.reverse,
-    )
 
 
 # ── key name → PTY bytes ─────────────────────────────────────────────────────
@@ -344,12 +332,12 @@ class PtyTerminal(Widget):
     def render_line(self, y: int) -> Strip:
         screen = self._pyte_screen
         if screen is None:
-            return Strip([Segment(" " * self._cols)])
+            return Strip([Segment(" " * self._cols, _TERM_DEFAULT)])
 
         if self._scroll_offset == 0:
             # 正常视图：直接渲染当前 pyte 屏幕
             if y >= screen.lines:
-                return Strip([Segment(" " * screen.columns)])
+                return Strip([Segment(" " * screen.columns, _TERM_DEFAULT)])
             row = screen.buffer[y]
             show_cursor = True
         else:
@@ -361,26 +349,42 @@ class PtyTerminal(Widget):
             view_top = view_bottom - self._rows
             line_idx = view_top + y
             if line_idx < 0 or line_idx >= total:
-                return Strip([Segment(" " * screen.columns)])
+                return Strip([Segment(" " * screen.columns, _TERM_DEFAULT)])
             if line_idx < hist_len:
                 row = list(hist)[line_idx]
             else:
                 screen_y = line_idx - hist_len
                 if screen_y >= screen.lines:
-                    return Strip([Segment(" " * screen.columns)])
+                    return Strip([Segment(" " * screen.columns, _TERM_DEFAULT)])
                 row = screen.buffer[screen_y]
             show_cursor = False
 
         segments: list[Segment] = []
         for x in range(screen.columns):
             char = row.get(x, _DEFAULT_CHAR)
-            style = _char_style(char)
+            ch = char.data or " "
+            fg = _to_rich_color(char.fg) or "#ffffff"
+            bg = _to_rich_color(char.bg) or "#000000"
+            if ch == " ":
+                # 背景单元格：只用颜色，不渲染 underline/bold 等装饰
+                # 规避 pyte 将当前 SGR 属性（含 underline）写入被清除单元格的问题
+                style = Style(color=fg, bgcolor=bg)
+            else:
+                style = Style(
+                    color=fg,
+                    bgcolor=bg,
+                    bold=char.bold,
+                    italic=char.italics,
+                    underline=char.underscore,
+                    strike=char.strikethrough,
+                    reverse=char.reverse,
+                )
             if show_cursor and screen.cursor.x == x and screen.cursor.y == y:
                 style = style + Style(reverse=True)
-            segments.append(Segment(char.data or " ", style))
+            segments.append(Segment(ch, style))
 
         sb = self._scrollbar_char(y)
         if sb is not None:
             segments[-1] = Segment(sb, _SB_THUMB if sb == "█" else _SB_TRACK)
 
-        return Strip(segments).apply_style(Style(color="#ffffff", bgcolor="#000000"))
+        return Strip(segments)
