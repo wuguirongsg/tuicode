@@ -21,7 +21,9 @@ _SB_TRACK = Style(color="bright_black")
 _TERM_DEFAULT = Style(color="#ffffff", bgcolor="#000000")
 
 if TYPE_CHECKING:
-    from textual.events import Key, MouseScrollDown, MouseScrollUp, Resize
+    from textual.events import (
+        Key, MouseDown, MouseScrollDown, MouseScrollUp, MouseUp, Resize,
+    )
 
 # ── pyte 颜色 → Rich 颜色字符串 ──────────────────────────────────────────────
 
@@ -97,6 +99,14 @@ _KEY_MAP: dict[str, bytes] = {
     "ctrl+s":       b"\x13", "ctrl+t": b"\x14", "ctrl+u": b"\x15",
     "ctrl+v":       b"\x16", "ctrl+w": b"\x17", "ctrl+x": b"\x18",
     "ctrl+y":       b"\x19", "ctrl+z": b"\x1a",
+    # alt + 方向键
+    "alt+up":       b"\x1b[1;3A",
+    "alt+down":     b"\x1b[1;3B",
+    "alt+right":    b"\x1b[1;3C",
+    "alt+left":     b"\x1b[1;3D",
+    # alt + 常用键
+    "alt+enter":    b"\x1b\r",
+    "alt+backspace": b"\x1b\x7f",
 }
 
 
@@ -259,9 +269,54 @@ class PtyTerminal(Widget):
             self._focus_requested = False
             self.focus()
 
+    # ── 鼠标转发辅助 ─────────────────────────────────────────────────────────
+
+    def _mouse_enabled(self) -> bool:
+        """子进程是否已启用鼠标跟踪（pyte 私有模式 1000/1002/1003）。"""
+        screen = self._pyte_screen
+        return screen is not None and bool(screen.mode & {1000, 1002, 1003})
+
+    def _screen_to_pty(self, screen_x: int, screen_y: int) -> tuple[int, int] | None:
+        """屏幕绝对坐标 → 1-indexed PTY 列/行；越界返回 None。"""
+        r = self.region
+        col = screen_x - r.x - 1   # 减去左边框
+        row = screen_y - r.y - 1   # 减去上边框
+        if col < 0 or row < 0:
+            return None
+        screen = self._pyte_screen
+        if screen and (col >= screen.columns or row >= screen.lines):
+            return None
+        return col + 1, row + 1
+
+    def _write_mouse(self, button: int, col: int, row: int, press: bool) -> None:
+        """将鼠标事件编码为 SGR（首选）或 X10 序列并写入 PTY。"""
+        if self._master_fd is None:
+            return
+        screen = self._pyte_screen
+        sgr = screen is not None and 1006 in screen.mode
+        if sgr:
+            suffix = "M" if press else "m"
+            data = f"\x1b[<{button};{col};{row}{suffix}".encode()
+        else:
+            if not press:
+                button = 3
+            if col > 222 or row > 222:
+                return
+            data = bytes([0x1b, 0x5b, 0x4d, button + 32, col + 32, row + 32])
+        try:
+            os.write(self._master_fd, data)
+        except OSError:
+            pass
+
     # ── 滚动 ──────────────────────────────────────────────────────────────────
 
     def on_mouse_scroll_up(self, event: MouseScrollUp) -> None:  # type: ignore[override]
+        if self._mouse_enabled() and self._scroll_offset == 0:
+            pos = self._screen_to_pty(event.screen_x, event.screen_y)
+            if pos:
+                self._write_mouse(64, pos[0], pos[1], press=True)
+            event.stop()
+            return
         if self._pyte_screen is None:
             return
         max_offset = len(self._pyte_screen.scrollback)
@@ -271,6 +326,12 @@ class PtyTerminal(Widget):
         event.stop()
 
     def on_mouse_scroll_down(self, event: MouseScrollDown) -> None:  # type: ignore[override]
+        if self._mouse_enabled() and self._scroll_offset == 0:
+            pos = self._screen_to_pty(event.screen_x, event.screen_y)
+            if pos:
+                self._write_mouse(65, pos[0], pos[1], press=True)
+            event.stop()
+            return
         self._scroll_offset = max(self._scroll_offset - self._SCROLL_STEP, 0)
         self._update_scroll_indicator()
         self.refresh()
@@ -282,10 +343,28 @@ class PtyTerminal(Widget):
         else:
             self.border_subtitle = ""
 
-    # ── 焦点 ──────────────────────────────────────────────────────────────────
+    # ── 焦点 + 鼠标点击 ───────────────────────────────────────────────────────
 
-    def on_mouse_down(self) -> None:
+    def on_mouse_down(self, event: MouseDown) -> None:  # type: ignore[override]
         self.focus()
+        if not self._mouse_enabled():
+            return
+        pos = self._screen_to_pty(event.screen_x, event.screen_y)
+        if pos is None:
+            return
+        btn = {1: 0, 2: 1, 3: 2}.get(event.button, 0)
+        self._write_mouse(btn, pos[0], pos[1], press=True)
+        event.stop()
+
+    def on_mouse_up(self, event: MouseUp) -> None:  # type: ignore[override]
+        if not self._mouse_enabled():
+            return
+        pos = self._screen_to_pty(event.screen_x, event.screen_y)
+        if pos is None:
+            return
+        btn = {1: 0, 2: 1, 3: 2}.get(event.button, 0)
+        self._write_mouse(btn, pos[0], pos[1], press=False)
+        event.stop()
 
     # ── 键盘输入 ──────────────────────────────────────────────────────────────
 
