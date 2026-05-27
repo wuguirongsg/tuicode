@@ -50,7 +50,7 @@ class TuiCodeApp(App):
     BINDINGS = [
         ("ctrl+q", "quit", "退出"),
         ("ctrl+grave_accent", "focus_terminal", "聚焦终端"),
-        ("ctrl+shift+t", "new_agent_terminal", "新建智能体终端"),
+        ("ctrl+t", "new_agent_terminal", "新建智能体终端"),
         ("alt+1", "focus_window(1)", "切换窗口 1"),
         ("alt+2", "focus_window(2)", "切换窗口 2"),
         ("alt+3", "focus_window(3)", "切换窗口 3"),
