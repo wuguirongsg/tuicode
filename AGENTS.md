@@ -1,4 +1,4 @@
-# AgentDeck — Agent 工作规范
+# TuiCode — Agent 工作规范
 
 > 只写"读代码 / 读 README / 读架构文档发现不了"的信息。Session 行为由 Hook 强制执行。
 > 完整产品方向见 [.harness/product/backlog.md](.harness/product/backlog.md)，技术架构见 [docs/agentdeck_architecture.md](docs/agentdeck_architecture.md)。
@@ -26,7 +26,7 @@
 
 ## 项目特殊事项
 
-- 代码主目录是 `src/agentdeck/`（MVP 新建）。`demo/tui_demo.py` 是技术 spike 参考，**不要直接迭代它**，需要时复制片段到 `src/`。
+- 代码主目录是 `src/tuicode/`（MVP 新建）。`demo/tui_demo.py` 是技术 spike 参考，**不要直接迭代它**，需要时复制片段到 `src/`。
 - 中文优先：用户面对话、commit message、文档默认简体中文，标识符与代码注释仍用英文。
 
 ## 文件索引

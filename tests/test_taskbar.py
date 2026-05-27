@@ -5,9 +5,9 @@ import asyncio
 
 from textual.app import App, ComposeResult
 
-from agentdeck.ui.float_window import FloatWindow
-from agentdeck.ui.taskbar import TaskButton, WindowTaskBar
-from agentdeck.ui.workspace import FloatWorkspace
+from tuicode.ui.float_window import FloatWindow
+from tuicode.ui.taskbar import TaskButton, WindowTaskBar
+from tuicode.ui.workspace import FloatWorkspace
 
 
 # ── 测试 App 骨架 ─────────────────────────────────────────────────────────────
@@ -224,7 +224,7 @@ class TestDragBoundary:
                 win = await ws.open_window(FloatWindow("bound-test", x=2, y=1))
                 await pilot.pause()
 
-                from agentdeck.ui.float_window import TitleBar
+                from tuicode.ui.float_window import TitleBar
                 tb = win.query_one(TitleBar)
                 tb.post_message(TitleBar.DragMoved(-999, 0))
                 await pilot.pause()
@@ -243,7 +243,7 @@ class TestDragBoundary:
                 win = await ws.open_window(FloatWindow("bound-test", x=4, y=2))
                 await pilot.pause()
 
-                from agentdeck.ui.float_window import TitleBar
+                from tuicode.ui.float_window import TitleBar
                 tb = win.query_one(TitleBar)
                 tb.post_message(TitleBar.DragMoved(0, -999))
                 await pilot.pause()

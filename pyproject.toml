@@ -3,19 +3,20 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentdeck"
+name = "tuicode"
 version = "0.1.0"
 description = "AI 编程智能体的 TUI 宿主环境"
 requires-python = ">=3.11"
 dependencies = [
     "textual>=0.60.0",
+    "pyte>=0.8.0",
 ]
 
 [project.scripts]
-agentdeck = "agentdeck.__main__:main"
+tuicode = "tuicode.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentdeck"]
+packages = ["src/tuicode"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/"]

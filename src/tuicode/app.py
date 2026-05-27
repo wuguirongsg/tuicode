@@ -1,15 +1,17 @@
 from textual.app import App, ComposeResult
+from textual.theme import Theme
 from textual.widget import Widget
 
-from agentdeck import __version__
-from agentdeck.ui.editor_window import EditorWindow
-from agentdeck.ui.float_window import FloatWindow
-from agentdeck.ui.menu_bar import MenuBar
-from agentdeck.ui.right_panel import RightPanel
-from agentdeck.ui.status_bar import StatusBar
-from agentdeck.ui.taskbar import WindowTaskBar
-from agentdeck.ui.terminal_strip import TerminalStrip
-from agentdeck.ui.workspace import FloatWorkspace
+from tuicode import __version__
+from tuicode.ui.editor_window import EditorWindow
+from tuicode.ui.float_window import FloatWindow
+from tuicode.ui.menu_bar import MenuBar
+from tuicode.ui.right_panel import RightPanel
+from tuicode.ui.status_bar import StatusBar
+from tuicode.ui.taskbar import WindowTaskBar
+from tuicode.ui.pty_terminal import PtyTerminal
+from tuicode.ui.terminal_strip import TerminalStrip
+from tuicode.ui.workspace import FloatWorkspace
 
 
 class LeftColumn(Widget):
@@ -40,11 +42,13 @@ class MainContent(Widget):
         yield RightPanel()
 
 
-class AgentDeckApp(App):
-    TITLE = "AgentDeck"
+class TuiCodeApp(App):
+    TITLE = "TUICODE"
+    CTRL_C_EXITS = False  # Ctrl+C 透传给终端，不退出 App；用 Ctrl+Q 退出
 
     BINDINGS = [
         ("ctrl+q", "quit", "退出"),
+        ("ctrl+grave_accent", "focus_terminal", "聚焦终端"),
         ("ctrl+t", "test_windows", "[临时] 打开测试浮窗"),
         ("alt+1", "focus_window(1)", "切换窗口 1"),
         ("alt+2", "focus_window(2)", "切换窗口 2"),
@@ -53,9 +57,26 @@ class AgentDeckApp(App):
 
     CSS = """
     Screen {
-        background: #0d1117;
+        background: $background;
     }
     """
+
+    def on_mount(self) -> None:
+        self.register_theme(Theme(
+            name="tuicode",
+            primary="#7c3aed",
+            secondary="#2563eb",
+            accent="#f59e0b",
+            success="#10b981",
+            warning="#f59e0b",
+            error="#ef4444",
+            foreground="#e2e8f0",
+            background="#0f172a",
+            surface="#1e293b",
+            panel="#243347",
+            dark=True,
+        ))
+        self.theme = "tuicode"
 
     def compose(self) -> ComposeResult:
         yield MenuBar()
@@ -100,6 +121,12 @@ class AgentDeckApp(App):
                 return
         ws = self.query_one(FloatWorkspace)
         await ws.open_window(EditorWindow(msg.path))
+
+    # ── 终端聚焦 ──────────────────────────────────────────────────────────────
+
+    def action_focus_terminal(self) -> None:
+        terminal = self.query_one(PtyTerminal)
+        terminal.focus()
 
     # ── 临时测试 ──────────────────────────────────────────────────────────────
 

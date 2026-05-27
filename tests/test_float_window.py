@@ -5,8 +5,8 @@ import asyncio
 
 from textual.app import App, ComposeResult
 
-from agentdeck.ui.float_window import FloatWindow, ResizeHandle, TitleBar
-from agentdeck.ui.workspace import FloatWorkspace
+from tuicode.ui.float_window import FloatWindow, ResizeHandle, TitleBar
+from tuicode.ui.workspace import FloatWorkspace
 
 
 # ── 测试 App 骨架 ─────────────────────────────────────────────────────────────

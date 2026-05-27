@@ -5,7 +5,8 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static
 
-from agentdeck.ui.float_window import FloatWindow
+from tuicode.i18n import t
+from tuicode.ui.float_window import FloatWindow
 
 
 class FloatWorkspace(Widget):
@@ -28,13 +29,13 @@ class FloatWorkspace(Widget):
     DEFAULT_CSS = """
     FloatWorkspace {
         height: 1fr;
-        background: #0d1117;
+        background: $background;
         overflow: hidden;
         layers: base floating;
     }
     FloatWorkspace #ws-hint {
         layer: base;
-        color: $text-disabled;
+        color: $panel-lighten-2;
         content-align: center middle;
         width: 100%;
         height: 100%;
@@ -48,10 +49,7 @@ class FloatWorkspace(Widget):
         self._windows: list[FloatWindow] = []
 
     def compose(self) -> ComposeResult:
-        yield Static(
-            "浮窗工作区\n\n打开文件或启动智能体会话后，工作窗口将在此区域显示",
-            id="ws-hint",
-        )
+        yield Static(t("workspace.hint"), id="ws-hint")
 
     async def open_window(self, window: FloatWindow) -> FloatWindow:
         """挂载浮窗到工作区，cascade 级联定位，补偿垂直堆叠偏移。"""

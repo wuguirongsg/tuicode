@@ -6,7 +6,7 @@ from typing import AsyncIterator
 
 import pytest
 
-from agentdeck.agent_protocol import (
+from tuicode.agent_protocol import (
     AgentAdapter,
     AgentCapabilities,
     Chunk,

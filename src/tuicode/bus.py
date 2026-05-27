@@ -4,7 +4,7 @@ import asyncio
 from collections import defaultdict
 from typing import Callable, Type, TypeVar
 
-from agentdeck.events import Event
+from tuicode.events import Event
 
 E = TypeVar("E", bound=Event)
 Handler = Callable[[Event], None]

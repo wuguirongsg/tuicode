@@ -5,6 +5,8 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static
 
+from tuicode.i18n import t
+
 
 class TaskButton(Widget):
     """任务栏单个窗口按钮。"""
@@ -20,11 +22,11 @@ class TaskButton(Widget):
     TaskButton {
         width: auto;
         height: 1;
-        padding: 0 1;
+        padding: 0 2;
         color: $text-muted;
     }
-    TaskButton:hover { background: $panel; color: $text; }
-    TaskButton.minimized { color: $text-disabled; }
+    TaskButton:hover { background: $surface; color: $text; }
+    TaskButton.minimized { color: $text-disabled; text-style: italic; }
     """
 
     def __init__(self, window: object, **kwargs) -> None:
@@ -57,12 +59,13 @@ class WindowTaskBar(Widget):
     WindowTaskBar {
         height: 1;
         layout: horizontal;
-        background: $panel-darken-2;
+        background: $surface;
         padding: 0 1;
     }
     WindowTaskBar #tb-hint {
         color: $text-disabled;
         width: auto;
+        text-style: italic;
     }
     """
 
@@ -71,7 +74,7 @@ class WindowTaskBar(Widget):
         self._buttons: dict[int, TaskButton] = {}  # id(window) -> TaskButton
 
     def compose(self) -> ComposeResult:
-        yield Static("（无打开窗口）", id="tb-hint")
+        yield Static(t("taskbar.no_windows"), id="tb-hint")
 
     async def add_window(self, window: object) -> None:
         btn = TaskButton(window, id=f"tb-{id(window)}")

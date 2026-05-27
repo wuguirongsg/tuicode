@@ -6,3 +6,10 @@ __pycache__/
 dist/
 build/
 .DS_Store
+
+tmp/
+*.log
+*.swp
+*.bak
+*.retry
+*.pid
