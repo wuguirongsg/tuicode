@@ -369,4 +369,4 @@ class PtyTerminal(Widget):
         if sb is not None:
             segments[-1] = Segment(sb, _SB_THUMB if sb == "█" else _SB_TRACK)
 
-        return Strip(segments).apply_style(Style(bgcolor="#000000"))
+        return Strip(segments).apply_style(Style(color="#ffffff", bgcolor="#000000"))
