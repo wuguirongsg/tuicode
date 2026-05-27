@@ -89,7 +89,7 @@ class TuiCodeApp(App):
         self, msg: FloatWorkspace.WindowOpened
     ) -> None:
         await self.query_one(WindowTaskBar).add_window(msg.window)
-        self.query_one(StatusBar).set_mascot_state("opening", auto_reset=2.0)
+        self.query_one(RightPanel).set_mascot_state("opening", auto_reset=2.0)
 
     async def on_float_window_closed(self, msg: FloatWindow.Closed) -> None:
         await self.query_one(WindowTaskBar).remove_window(msg.window)
