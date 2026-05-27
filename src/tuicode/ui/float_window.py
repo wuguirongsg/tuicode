@@ -161,21 +161,21 @@ class FloatWindow(Widget):
         self.border_title = (
             f"[#ff5f57 bold]●[/] [#febc2e bold]●[/] [#28c840 bold]●[/]  {title}"
         )
-        self.styles.border = ("heavy", self._border_color)
+        self.styles.border = ("round", self._border_color)
 
     # ── 焦点高亮 ──────────────────────────────────────────────────────────────
 
     def on_focus(self, event: events.Focus) -> None:
-        self.styles.border = ("heavy", "#e0f7ff")
+        self.styles.border = ("round", "#e0f7ff")
 
     def on_blur(self, event: events.Blur) -> None:
-        self.styles.border = ("heavy", self._border_color)
+        self.styles.border = ("round", self._border_color)
 
     def on_descendant_focus(self, event: events.DescendantFocus) -> None:
-        self.styles.border = ("heavy", "#e0f7ff")
+        self.styles.border = ("round", "#e0f7ff")
 
     def on_descendant_blur(self, event: events.DescendantBlur) -> None:
-        self.styles.border = ("heavy", self._border_color)
+        self.styles.border = ("round", self._border_color)
 
     # ── 置顶 ──────────────────────────────────────────────────────────────────
 
