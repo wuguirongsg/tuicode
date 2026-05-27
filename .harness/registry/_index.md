@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-27 04:00] FIX PtyTerminal 滚动/调整/光标三修：margins=None AttributeError、_ResizeHandle 拖拽、content_size 对齐，91 测试全绿
+
 [2026-05-27 03:00] FIX PtyTerminal 焦点 + Ctrl+C 双修：can_focus 大小写(Textual 8.x)、slave PTY 控制终端未绑定导致信号不投递
 
 [2026-05-27 02:00] FIX PtyTerminal 焦点修复：on_click 获焦 + Ctrl+` 快捷键 + 聚焦蓝边框高亮
