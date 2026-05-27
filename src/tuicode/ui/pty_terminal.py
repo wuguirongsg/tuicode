@@ -186,7 +186,7 @@ class PtyTerminal(Widget):
         self._process = await asyncio.create_subprocess_exec(
             self._shell,
             preexec_fn=_child_setup,
-            env={**os.environ, "TERM": "xterm-256color", "COLORTERM": "truecolor"},
+            env={**os.environ, "TERM": "xterm-256color", "COLORTERM": "truecolor", "FORCE_COLOR": "3"},
         )
 
         loop = asyncio.get_event_loop()
