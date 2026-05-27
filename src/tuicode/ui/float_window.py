@@ -91,11 +91,12 @@ class FloatWindow(Widget):
     MIN_WIDTH = 20
     MIN_HEIGHT = 5
 
-    # 边框标题格式: ┏ ● ● ●  Title ━━━━━┓
-    # region.x+0=┏  +1=空格  +2=●(close)  +4=●(min)  +6=●(max)
-    _BTN_CLOSE_X: frozenset[int] = frozenset({2})
-    _BTN_MIN_X:   frozenset[int] = frozenset({4})
-    _BTN_MAX_X:   frozenset[int] = frozenset({6})
+    # 边框标题格式: ┏━ ● ● ●  Title ━━━━━┓
+    # region.x+0=┏  +1=━  +2=space  +3=●(close)  +5=●(min)  +7=●(max)
+    # 每个按钮检测 2 格宽以容纳渲染误差
+    _BTN_CLOSE_X: frozenset[int] = frozenset({2, 3})
+    _BTN_MIN_X:   frozenset[int] = frozenset({4, 5})
+    _BTN_MAX_X:   frozenset[int] = frozenset({6, 7})
 
     DEFAULT_CSS = """
     FloatWindow {
