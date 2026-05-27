@@ -8,7 +8,7 @@ import pyte
 import pytest
 from textual.app import App, ComposeResult
 
-from agentdeck.ui.pty_terminal import PtyTerminal, _char_style, _to_rich_color
+from tuicode.ui.pty_terminal import PtyTerminal, _char_style, _to_rich_color
 
 
 # ── 颜色转换 ──────────────────────────────────────────────────────────────────

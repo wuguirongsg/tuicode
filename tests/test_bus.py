@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from agentdeck.bus import EventBus
-from agentdeck.events import (
+from tuicode.bus import EventBus
+from tuicode.events import (
     AgentMessage,
     CursorMoved,
     FileModified,

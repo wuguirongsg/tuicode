@@ -8,10 +8,10 @@ import pytest
 from textual.app import App, ComposeResult
 from textual.widgets import TextArea
 
-from agentdeck.bus import EventBus
-from agentdeck.events import FileModified
-from agentdeck.ui.editor_window import ConfirmCloseModal, EditorWindow
-from agentdeck.ui.workspace import FloatWorkspace
+from tuicode.bus import EventBus
+from tuicode.events import FileModified
+from tuicode.ui.editor_window import ConfirmCloseModal, EditorWindow
+from tuicode.ui.workspace import FloatWorkspace
 
 
 # ── 工具 App ──────────────────────────────────────────────────────────────────
@@ -132,7 +132,7 @@ class TestEditorWindowSave:
 
     def test_save_publishes_file_modified_event(self, tmp_path: Path):
         """action_save 后 FileModified 事件应被发布到 default_bus。"""
-        from agentdeck.bus import default_bus
+        from tuicode.bus import default_bus
 
         f = tmp_path / "event.py"
         f.write_text("pass", encoding="utf-8")
@@ -185,7 +185,7 @@ class TestLanguageDetection:
     ])
     def test_detect_language_by_suffix(self, suffix: str, expected_lang: str | None, tmp_path: Path):
         """根据文件后缀正确检测语言，未知后缀返回 None。"""
-        from agentdeck.ui.editor_window import _LANG_MAP
+        from tuicode.ui.editor_window import _LANG_MAP
         assert _LANG_MAP.get(suffix) == expected_lang
 
 

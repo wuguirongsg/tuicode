@@ -1,6 +1,6 @@
 {
   "_readme": "只允许把 passes 从 false 改成 true。禁止删除条目或修改 description。违反视为严重错误。",
-  "_project": "AgentDeck",
+  "_project": "TuiCode",
   "_sprint": "Phase 1 — MVP",
   "_updated": "2026-05-27T01:30",
   "features": [
