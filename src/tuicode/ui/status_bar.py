@@ -12,12 +12,12 @@ class StatusBar(Widget):
         dock: bottom;
         height: 1;
         layout: horizontal;
-        background: $primary-darken-3;
+        background: $primary;
         padding: 0 1;
     }
-    StatusBar #sb-left  { width: 1fr; color: $text-muted; }
-    StatusBar #sb-right { width: auto; color: $text-muted; }
-    StatusBar #sb-sep   { width: 1; color: $primary-darken-1; }
+    StatusBar #sb-left  { width: 1fr; color: $background 90%; }
+    StatusBar #sb-right { width: auto; color: $background 70%; }
+    StatusBar #sb-sep   { width: 1; color: $background 40%; }
     """
 
     agent_count: reactive[int] = reactive(0)

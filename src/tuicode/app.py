@@ -70,6 +70,7 @@ class TuiCodeApp(App):
             success="#10b981",
             warning="#f59e0b",
             error="#ef4444",
+            foreground="#e2e8f0",
             background="#0f172a",
             surface="#1e293b",
             panel="#243347",

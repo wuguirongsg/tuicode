@@ -44,7 +44,6 @@ class TitleBar(Widget):
         layout: horizontal;
         background: $panel;
         padding: 0 1;
-        border-bottom: solid $panel-lighten-1;
     }
     TitleBar #win-title { width: 1fr; color: $text-muted; text-align: center; }
     """
@@ -179,7 +178,6 @@ class FloatWindow(Widget):
         height: 1;
         layout: horizontal;
         background: $panel;
-        border-top: solid $panel-lighten-1;
     }
     FloatWindow #footer-spacer { width: 1fr; }
     """

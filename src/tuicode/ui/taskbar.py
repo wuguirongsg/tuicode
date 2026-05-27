@@ -59,9 +59,8 @@ class WindowTaskBar(Widget):
     WindowTaskBar {
         height: 1;
         layout: horizontal;
-        background: $panel;
+        background: $surface;
         padding: 0 1;
-        border-bottom: solid $panel-lighten-1;
     }
     WindowTaskBar #tb-hint {
         color: $text-disabled;

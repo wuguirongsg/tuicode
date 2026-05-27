@@ -14,7 +14,6 @@ class MenuBar(Widget):
         layout: horizontal;
         background: $panel;
         padding: 0 1;
-        border-bottom: solid $panel-lighten-1;
     }
     MenuBar .brand {
         width: auto;

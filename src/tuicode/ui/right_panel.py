@@ -33,7 +33,6 @@ class RightPanel(Widget):
         background: $panel;
         layout: horizontal;
         padding: 0 1;
-        border-bottom: solid $panel-lighten-1;
     }
     RightPanel .rp-tab {
         width: auto;
