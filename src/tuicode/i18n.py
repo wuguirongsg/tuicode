@@ -42,6 +42,13 @@ _STRINGS: dict[str, dict[str, str]] = {
     # ── TerminalStrip ─────────────────────────────────────────────────────────
     "terminal.tab_bash":  {"zh": "[bash]  [+]", "en": "[bash]  [+]"},
     "terminal.drag_hint": {"zh": "─ ↕ 拖动调整终端高度 ↕ ─", "en": "─ ↕ drag to resize terminal ↕ ─"},
+    # ── Mascot states ─────────────────────────────────────────────────────────
+    "mascot.idle":    {"zh": "就绪",   "en": "ready"},
+    "mascot.opening": {"zh": "读取",   "en": "reading"},
+    "mascot.running": {"zh": "运行",   "en": "running"},
+    "mascot.agent":   {"zh": "智能体", "en": "agent"},
+    "mascot.success": {"zh": "完成",   "en": "done"},
+    "mascot.error":   {"zh": "错误",   "en": "error"},
     # ── Settings screen ───────────────────────────────────────────────────────
     "settings.title":    {"zh": "设置", "en": "Settings"},
     "settings.language": {"zh": "界面语言", "en": "Interface Language"},
