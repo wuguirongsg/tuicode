@@ -186,7 +186,7 @@ class PtyTerminal(Widget):
         self._process = await asyncio.create_subprocess_exec(
             self._shell,
             preexec_fn=_child_setup,
-            env={**os.environ, "TERM": "xterm-256color"},
+            env={**os.environ, "TERM": "xterm-256color", "COLORTERM": "truecolor"},
         )
 
         loop = asyncio.get_event_loop()
@@ -369,4 +369,4 @@ class PtyTerminal(Widget):
         if sb is not None:
             segments[-1] = Segment(sb, _SB_THUMB if sb == "█" else _SB_TRACK)
 
-        return Strip(segments)
+        return Strip(segments).apply_style(Style(bgcolor="#000000"))

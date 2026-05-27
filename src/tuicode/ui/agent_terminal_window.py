@@ -13,6 +13,12 @@ class AgentTerminalWindow(FloatWindow):
     DEFAULT_WIDTH = 80
     DEFAULT_HEIGHT = 24
 
+    DEFAULT_CSS = FloatWindow.DEFAULT_CSS + """
+    AgentTerminalWindow #win-body {
+        background: #000000;
+    }
+    """
+
     def __init__(
         self,
         command: str = "/bin/bash",
