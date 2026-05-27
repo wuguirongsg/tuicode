@@ -70,10 +70,6 @@ _L0 = ".............##..######..##............."  # 内层腿 row8
 _L1 = "............##...######...##............"  # 内层腿 row9
 _L2 = ".......##..##....######....##..##......."  # 中+内层 row10
 _L3 = "......##..##.....######.....##..##......"  # 中+内层 row11
-_L4 = "..##.##..##......######......##..##.##.."  # 全3对 row12
-_L5 = ".##.##..##.......######.......##..##.##."  # 全3对 row13
-_L6 = "##...............######...............##"  # 外层腿 row14
-_L7 = "........................................"  # 空行 row15
 
 
 def _build_frame(eyes: tuple[str, str], mouth: str) -> list[str]:
@@ -90,10 +86,6 @@ def _build_frame(eyes: tuple[str, str], mouth: str) -> list[str]:
         _L1,       # row 9
         _L2,       # row 10 中层腿出现
         _L3,       # row 11
-        _L4,       # row 12 外层腿出现
-        _L5,       # row 13
-        _L6,       # row 14 外层腿末端
-        _L7,       # row 15 空
     ]
 
 
@@ -131,14 +123,14 @@ class MascotPanel(Widget):
 
     DEFAULT_CSS = """
     MascotPanel {
-        height: 6;
+        height: 5;
         width: 1fr;
         background: $panel;
         border-bottom: solid $panel-lighten-1;
         layout: vertical;
     }
     MascotPanel #mp-art {
-        height: 4;
+        height: 3;
         width: 1fr;
         text-align: center;
     }
