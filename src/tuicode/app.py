@@ -63,20 +63,20 @@ class TuiCodeApp(App):
 
     def on_mount(self) -> None:
         self.register_theme(Theme(
-            name="tuicode",
-            primary="#7c3aed",
-            secondary="#2563eb",
-            accent="#f59e0b",
-            success="#10b981",
-            warning="#f59e0b",
-            error="#ef4444",
-            foreground="#e2e8f0",
-            background="#0f172a",
-            surface="#1e293b",
-            panel="#243347",
+            name="cyberpunk",
+            primary="#00d4ff",
+            secondary="#bf00ff",
+            accent="#ff00a0",
+            success="#00ff41",
+            warning="#ffb800",
+            error="#ff003c",
+            foreground="#c8f4ff",
+            background="#000510",
+            surface="#060d1f",
+            panel="#0a1428",
             dark=True,
         ))
-        self.theme = "tuicode"
+        self.theme = "cyberpunk"
 
     def compose(self) -> ComposeResult:
         yield MenuBar()
