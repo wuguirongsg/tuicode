@@ -16,6 +16,20 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-27 10:00] FIX 机器人去掉最下排 Braille 行，面板高度 6→5，89 测试通过
+
+[2026-05-27 09:45] FIX 机器人头部收窄(34→16px) + 眼睛改 2×2 块 + 嘴巴居中 + 颈部改6条腿，89 测试通过
+
+[2026-05-27 09:15] DONE 右栏 Braille 像素机器人：_to_braille 编码器 + 6 状态 9 帧 MascotPanel + 状态栏简化，89 测试通过
+
+[2026-05-27 08:30] DONE 状态栏吉祥物机器人：6 状态动画 + 打开文件反馈，89 测试通过
+
+[2026-05-27 07:45] FIX 浮窗边框 heavy → round，细线圆角更清爽
+
+[2026-05-27 07:30] FIX border-title 按钮检测偏左一格：heavy 边框格式 ┏━ title，标题起点 +3 非 +2，检测区扩至 {2,3}/{4,5}/{6,7}
+
+[2026-05-27 07:00] DONE 赛博朋克 UI：霓虹 border-title 浮窗 + ASCII 背景 + 淡入动画 + cyberpunk 主题，89 测试通过 → sessions/2026-05-27-0700.md
+
 [2026-05-27 06:00] DONE 改名 AgentDeck → TuiCode + Crush 风格 UI 重设计 + i18n 中英双语支持，91 测试通过，3 commits
 
 [2026-05-27 05:00] FIX 滚动 KeyError + 滚动条：scrollback sparse dict 用 .get() 兜底，render_line 最右列 overlay █/│ 滚动条，91 测试通过

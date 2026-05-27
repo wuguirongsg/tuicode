@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from textual.app import ComposeResult
 from textual.reactive import reactive
 from textual.widget import Widget
@@ -16,8 +18,8 @@ class StatusBar(Widget):
         padding: 0 1;
     }
     StatusBar #sb-left  { width: 1fr; color: $background 90%; }
-    StatusBar #sb-right { width: auto; color: $background 70%; }
     StatusBar #sb-sep   { width: 1; color: $background 40%; }
+    StatusBar #sb-right { width: auto; color: $background 70%; }
     """
 
     agent_count: reactive[int] = reactive(0)

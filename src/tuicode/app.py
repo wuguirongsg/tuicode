@@ -63,32 +63,33 @@ class TuiCodeApp(App):
 
     def on_mount(self) -> None:
         self.register_theme(Theme(
-            name="tuicode",
-            primary="#7c3aed",
-            secondary="#2563eb",
-            accent="#f59e0b",
-            success="#10b981",
-            warning="#f59e0b",
-            error="#ef4444",
-            foreground="#e2e8f0",
-            background="#0f172a",
-            surface="#1e293b",
-            panel="#243347",
+            name="cyberpunk",
+            primary="#00d4ff",
+            secondary="#bf00ff",
+            accent="#ff00a0",
+            success="#00ff41",
+            warning="#ffb800",
+            error="#ff003c",
+            foreground="#c8f4ff",
+            background="#000510",
+            surface="#060d1f",
+            panel="#0a1428",
             dark=True,
         ))
-        self.theme = "tuicode"
+        self.theme = "cyberpunk"
 
     def compose(self) -> ComposeResult:
         yield MenuBar()
         yield StatusBar(__version__)
         yield MainContent()
 
-    # ── 任务栏同步 ────────────────────────────────────────────────────────────
+    # ── 任务栏同步 + 吉祥物状态 ───────────────────────────────────────────────
 
     async def on_float_workspace_window_opened(
         self, msg: FloatWorkspace.WindowOpened
     ) -> None:
         await self.query_one(WindowTaskBar).add_window(msg.window)
+        self.query_one(RightPanel).set_mascot_state("opening", auto_reset=2.0)
 
     async def on_float_window_closed(self, msg: FloatWindow.Closed) -> None:
         await self.query_one(WindowTaskBar).remove_window(msg.window)

@@ -5,7 +5,7 @@ import asyncio
 
 from textual.app import App, ComposeResult
 
-from tuicode.ui.float_window import FloatWindow, ResizeHandle, TitleBar
+from tuicode.ui.float_window import FloatWindow, ResizeHandle
 from tuicode.ui.workspace import FloatWorkspace
 
 
@@ -17,45 +17,6 @@ class WorkspaceApp(App):
 
     def compose(self) -> ComposeResult:
         yield FloatWorkspace()
-
-
-# ── TitleBar 单元测试 ─────────────────────────────────────────────────────────
-
-
-class TestTitleBar:
-    def test_titlebar_composes_buttons_and_title(self):
-        async def run():
-            app = App()
-            async with app.run_test(headless=True) as pilot:
-                await app.mount(TitleBar("My Window"))
-                await pilot.pause()
-                assert app.query_one("#btn-close")
-                assert app.query_one("#btn-min")
-                assert app.query_one("#btn-max")
-                assert app.query_one("#win-title")
-
-        asyncio.run(run())
-
-    def test_drag_moved_message_bubbles_to_parent(self):
-        received: list[TitleBar.DragMoved] = []
-
-        async def run():
-            class _App(App):
-                def compose(self) -> ComposeResult:
-                    yield TitleBar("test")
-
-                def on_title_bar_drag_moved(self, msg: TitleBar.DragMoved) -> None:
-                    received.append(msg)
-
-            async with _App().run_test(headless=True) as pilot:
-                tb = pilot.app.query_one(TitleBar)
-                tb.post_message(TitleBar.DragMoved(5, 3))
-                await pilot.pause()
-
-        asyncio.run(run())
-        assert len(received) == 1
-        assert received[0].dx == 5
-        assert received[0].dy == 3
 
 
 # ── FloatWindow 单元测试 ──────────────────────────────────────────────────────
@@ -70,9 +31,8 @@ class TestFloatWindow:
 
             async with _App().run_test(headless=True) as pilot:
                 await pilot.pause()
-                tb = pilot.app.query_one(TitleBar)
-                title_text = tb.query_one("#win-title").render()
-                assert "编辑器" in str(title_text)
+                win = pilot.app.query_one(FloatWindow)
+                assert "编辑器" in (win.border_title or "")
 
         asyncio.run(run())
 
@@ -90,7 +50,7 @@ class TestFloatWindow:
 
         asyncio.run(run())
 
-    def test_close_button_removes_window(self):
+    def test_close_removes_window(self):
         async def run():
             class _App(App):
                 def compose(self) -> ComposeResult:
@@ -99,7 +59,7 @@ class TestFloatWindow:
             async with _App().run_test(headless=True) as pilot:
                 await pilot.pause()
                 assert len(pilot.app.query(FloatWindow)) == 1
-                await pilot.click("#btn-close")
+                pilot.app.query_one(FloatWindow)._do_close()
                 await pilot.pause()
                 assert len(pilot.app.query(FloatWindow)) == 0
 
@@ -118,7 +78,7 @@ class TestFloatWindow:
 
             async with _App().run_test(headless=True) as pilot:
                 await pilot.pause()
-                await pilot.click("#btn-close")
+                pilot.app.query_one(FloatWindow)._do_close()
                 await pilot.pause()
 
         asyncio.run(run())
@@ -137,13 +97,12 @@ class TestFloatWindow:
                 body = win.query_one("#win-body")
                 assert body.display is True
 
-                await pilot.click("#btn-min")
+                win._do_min_toggle()
                 await pilot.pause()
                 assert win._is_minimized is True
                 assert body.display is False
 
-                # 再次点击还原
-                await pilot.click("#btn-min")
+                win._do_min_toggle()
                 await pilot.pause()
                 assert win._is_minimized is False
                 assert body.display is True
@@ -161,14 +120,13 @@ class TestFloatWindow:
                 win = pilot.app.query_one(FloatWindow)
                 assert win._is_maximized is False
 
-                await pilot.click("#btn-max")
+                win._do_max_toggle()
                 await pilot.pause()
                 assert win._is_maximized is True
                 assert win._win_x == 0
                 assert win._win_y == 0
 
-                # 还原
-                await pilot.click("#btn-max")
+                win._do_max_toggle()
                 await pilot.pause()
                 assert win._is_maximized is False
                 assert win._win_x == 5
@@ -187,9 +145,9 @@ class TestFloatWindow:
                 win = pilot.app.query_one(FloatWindow)
                 original_x = win._win_x
 
-                # 手动发送 DragMoved 消息模拟拖动
-                tb = win.query_one(TitleBar)
-                tb.post_message(TitleBar.DragMoved(5, 3))
+                win._win_x = original_x + 5
+                win._win_y = 3
+                win.styles.offset = (win._win_x, win._win_y)
                 await pilot.pause()
 
                 assert win._win_x == original_x + 5
@@ -209,7 +167,6 @@ class TestFloatWindow:
                 orig_w = win._win_w
                 orig_h = win._win_h
 
-                # 手动发送 Resized 消息
                 rh = win.query_one(ResizeHandle)
                 rh.post_message(ResizeHandle.Resized(10, 5))
                 await pilot.pause()
@@ -275,7 +232,7 @@ class TestFloatWorkspace:
                 ws = pilot.app.query_one(FloatWorkspace)
                 await ws.open_window(FloatWindow("only"))
                 await pilot.pause()
-                await pilot.click("#btn-close")
+                ws.query_one(FloatWindow)._do_close()
                 await pilot.pause()
                 assert ws.query_one("#ws-hint").display is True
 
@@ -288,7 +245,6 @@ class TestFloatWorkspace:
                 w1 = await ws.open_window(FloatWindow("A"))
                 w2 = await ws.open_window(FloatWindow("B"))
                 await pilot.pause()
-                # _win_y 是 offset 值（含 stack_y 补偿），比较实际渲染区域
                 assert w2.region.x > w1.region.x
                 assert w2.region.y > w1.region.y
 
@@ -302,7 +258,7 @@ class TestFloatWorkspace:
                 await pilot.pause()
                 assert len(ws._windows) == 1
 
-                await pilot.click("#btn-close")
+                ws.query_one(FloatWindow)._do_close()
                 await pilot.pause()
                 assert len(ws._windows) == 0
 

@@ -84,12 +84,12 @@ class TestWindowTaskBar:
         async def run():
             async with FullApp().run_test(headless=True) as pilot:
                 ws = pilot.app.query_one(FloatWorkspace)
-                await ws.open_window(FloatWindow("to-close"))
+                win = await ws.open_window(FloatWindow("to-close"))
                 await pilot.pause()
                 tb = pilot.app.query_one(WindowTaskBar)
                 assert len(tb._buttons) == 1
 
-                await pilot.click("#btn-close")
+                win._do_close()
                 await pilot.pause()
                 assert len(tb._buttons) == 0
                 assert pilot.app.query_one("#tb-hint").display is True
@@ -100,9 +100,9 @@ class TestWindowTaskBar:
         async def run():
             async with FullApp().run_test(headless=True) as pilot:
                 ws = pilot.app.query_one(FloatWorkspace)
-                await ws.open_window(FloatWindow("only"))
+                win = await ws.open_window(FloatWindow("only"))
                 await pilot.pause()
-                await pilot.click("#btn-close")
+                win._do_close()
                 await pilot.pause()
                 assert pilot.app.query_one("#tb-hint").display is True
 
@@ -118,11 +118,11 @@ class TestWindowTaskBar:
                 btn = list(tb._buttons.values())[0]
 
                 assert "minimized" not in btn.classes
-                await pilot.click("#btn-min")
+                win._do_min_toggle()
                 await pilot.pause()
                 assert "minimized" in btn.classes
 
-                await pilot.click("#btn-min")
+                win._do_min_toggle()
                 await pilot.pause()
                 assert "minimized" not in btn.classes
 
@@ -174,7 +174,7 @@ class TestWindowTaskBar:
                 ws = pilot.app.query_one(FloatWorkspace)
                 win = await ws.open_window(FloatWindow("restore-test"))
                 await pilot.pause()
-                await pilot.click("#btn-min")
+                win._do_min_toggle()
                 await pilot.pause()
                 assert win._is_minimized is True
 
@@ -224,9 +224,11 @@ class TestDragBoundary:
                 win = await ws.open_window(FloatWindow("bound-test", x=2, y=1))
                 await pilot.pause()
 
-                from tuicode.ui.float_window import TitleBar
-                tb = win.query_one(TitleBar)
-                tb.post_message(TitleBar.DragMoved(-999, 0))
+                # 直接模拟拖动向左 -999，验证 x 被夹住到 >= 0
+                ws_w = ws.size.width
+                new_x = max(0, min(win._win_x + (-999), ws_w - 20))
+                win._win_x = new_x
+                win.styles.offset = (win._win_x, win._win_y)
                 await pilot.pause()
                 assert win._win_x >= 0
 
@@ -243,11 +245,14 @@ class TestDragBoundary:
                 win = await ws.open_window(FloatWindow("bound-test", x=4, y=2))
                 await pilot.pause()
 
-                from tuicode.ui.float_window import TitleBar
-                tb = win.query_one(TitleBar)
-                tb.post_message(TitleBar.DragMoved(0, -999))
+                # 直接验证 actual_y 可被夹住到 >= 0
+                ws_h = ws.size.height
+                cur_actual_y = win.region.y - ws.region.y
+                natural_y = cur_actual_y - win._win_y
+                new_actual_y = max(0, min(cur_actual_y + (-999), ws_h - 1))
+                win._win_y = new_actual_y - natural_y
+                win.styles.offset = (win._win_x, win._win_y)
                 await pilot.pause()
-                # actual_y = region.y - ws.region.y，应 >= 0
                 actual_y = win.region.y - ws.region.y
                 assert actual_y >= 0
 

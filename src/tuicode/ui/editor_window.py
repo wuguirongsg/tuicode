@@ -11,7 +11,7 @@ from textual.widgets import Button, Static, TextArea
 from tuicode.bus import default_bus
 from tuicode.events import FileModified
 from tuicode.i18n import t
-from tuicode.ui.float_window import FloatWindow, TitleBar
+from tuicode.ui.float_window import FloatWindow
 
 _LANG_MAP: dict[str, str] = {
     ".py": "python",
@@ -96,11 +96,8 @@ class EditorWindow(FloatWindow):
 
     def _refresh_title(self) -> None:
         prefix = "*" if self._dirty else ""
-        new_title = f"{prefix}{self._path.name}"
-        try:
-            self.query_one("#win-title", Static).update(new_title)
-        except Exception:
-            pass
+        self._title = f"{prefix}{self._path.name}"
+        self._refresh_border()
 
     def action_save(self) -> None:
         content = self.query_one("#editor-textarea", TextArea).text
@@ -112,7 +109,7 @@ class EditorWindow(FloatWindow):
         self._refresh_title()
         default_bus.publish(FileModified(self._path))
 
-    def on_title_bar_close_clicked(self, message: TitleBar.CloseClicked) -> None:
+    def _do_close(self) -> None:
         if self._dirty:
             self.app.push_screen(ConfirmCloseModal(), self._handle_close_confirm)
         else:

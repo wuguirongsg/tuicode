@@ -9,6 +9,7 @@ from textual.widget import Widget
 from textual.widgets import DirectoryTree, Static
 
 from tuicode.i18n import t
+from tuicode.ui.mascot import MascotPanel
 
 
 class RightPanel(Widget):
@@ -59,10 +60,14 @@ class RightPanel(Widget):
         self._root = Path(root) if root else Path.cwd()
 
     def compose(self) -> ComposeResult:
+        yield MascotPanel(id="rp-mascot")
         with Widget(id="rp-tabs"):
             yield Static(t("panel.tab_files"), classes="rp-tab-active")
             yield Static(t("panel.tab_git"), classes="rp-tab")
         yield DirectoryTree(self._root, id="file-tree")
+
+    def set_mascot_state(self, state: str, auto_reset: float = 0.0) -> None:
+        self.query_one(MascotPanel).set_state(state, auto_reset)
 
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
