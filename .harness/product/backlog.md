@@ -45,6 +45,7 @@
 
 - [2026-05-26] Sprint-1 — Phase 1 MVP 全 12 条 feat（见 features.json）
 - [2026-05-28] Phase 1 方向调整 — 从“Adapter 接管工具调用 + 审批”改为“PTY 智能体 + 文件/Git 变化感知”；详见 `.harness/registry/decisions/2026-05-28-observability-first.md`
+- [2026-05-28] Phase 2A — Agent 工作流打磨：Phase 1 验证、Git diff、stage/commit、布局预设、多 Agent 启动器、命令面板（feat-013 至 feat-018）
 
 ---
 

@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-28 15:57] PLAN Phase 2A Agent 工作流打磨：新增 feat-013 至 feat-018，目标从观测变化推进到审查 diff、布局切换、多 Agent 会话和 Git 收尾
+
 [2026-05-28] CONSTRAINT 菜单下拉 spike 结论：Textual 8.x vertical layout 不支持固定宽度子 widget；改用命令面板方案（Phase 2）
 
 [2026-05-28] DISCOVER 确认菜单栏未排入任何阶段计划；命令面板（Ctrl+Shift+P）规划在 Phase 2

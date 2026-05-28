@@ -1,8 +1,8 @@
 {
   "_readme": "只允许把 passes 从 false 改成 true。禁止删除条目或修改 description。违反视为严重错误。",
   "_project": "TuiCode",
-  "_sprint": "Phase 1 — MVP",
-  "_updated": "2026-05-27T16:21",
+  "_sprint": "Phase 2A — Agent 工作流打磨",
+  "_updated": "2026-05-28T15:57",
   "features": [
     {
       "id": "feat-001",
@@ -112,6 +112,68 @@
         "feat-010"
       ],
       "passes": true
+    },
+    {
+      "id": "feat-013",
+      "description": "Phase 1 全链路验证与 pyte 环境修复 — 补齐项目运行环境并验证观测型智能体工作台主路径",
+      "acceptance": "全量 `PYTHONPATH=src pytest -q` 通过；人工启动 TuiCode 后，在智能体 PTY 或底部终端中修改、创建、删除文件，文件树、编辑器外部变更标记和 Git 状态均自动刷新",
+      "depends_on": [
+        "feat-010",
+        "feat-011",
+        "feat-012"
+      ],
+      "passes": false
+    },
+    {
+      "id": "feat-014",
+      "description": "Git diff 只读预览 — 在 Git 面板选中文件后展示可扫描的 diff 视图，帮助用户核查智能体修改结果",
+      "acceptance": "右侧 git Tab 中选择一个已修改文件后，可打开只读 diff 预览；diff 正确区分新增、删除和上下文行；预览不修改工作区或暂存区",
+      "depends_on": [
+        "feat-012",
+        "feat-013"
+      ],
+      "passes": false
+    },
+    {
+      "id": "feat-015",
+      "description": "Git stage / unstage / commit 最小闭环 — 用户可在 TuiCode 内完成智能体修改后的 Git 收尾",
+      "acceptance": "Git 面板支持按文件 stage / unstage，支持输入 commit message 并提交；提交成功后 Git 状态刷新；提交失败时保留输入并显示可恢复错误",
+      "depends_on": [
+        "feat-014"
+      ],
+      "passes": false
+    },
+    {
+      "id": "feat-016",
+      "description": "布局预设 — 提供编辑、双 Agent 对比、调试三种工作模式，降低浮窗手动整理成本",
+      "acceptance": "`Ctrl+1` 切换编辑模式，`Ctrl+2` 切换双 Agent 对比模式，`Ctrl+3` 切换调试模式；切换后已有浮窗位置和尺寸符合预设，任务栏与焦点状态保持一致",
+      "depends_on": [
+        "feat-003",
+        "feat-004",
+        "feat-013"
+      ],
+      "passes": false
+    },
+    {
+      "id": "feat-017",
+      "description": "多 Agent PTY 会话启动器 — 提供 Claude / Codex / Aider / Custom command 的新建入口，并为每个会话维护稳定身份",
+      "acceptance": "用户可从 UI 新建至少两个 Agent PTY 会话；每个会话有稳定标题、session id 和运行状态；多个 Agent 浮窗可并存、切换、关闭且互不干扰输入焦点",
+      "depends_on": [
+        "feat-008",
+        "feat-013"
+      ],
+      "passes": false
+    },
+    {
+      "id": "feat-018",
+      "description": "命令面板 Ctrl+Shift+P — 用全屏模态收敛高频命令，替代不稳定的传统下拉菜单入口",
+      "acceptance": "`Ctrl+Shift+P` 打开命令面板；可搜索并执行打开 Agent、切换布局、打开 diff、切换右栏、切换底栏、Git commit 等命令；执行后关闭面板并回到原焦点",
+      "depends_on": [
+        "feat-014",
+        "feat-016",
+        "feat-017"
+      ],
+      "passes": false
     }
   ]
 }
