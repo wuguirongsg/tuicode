@@ -27,7 +27,7 @@ _MOUSE_BASIC_MODES = frozenset({1000, 1002, 1003})
 
 if TYPE_CHECKING:
     from textual.events import (
-        Key, MouseDown, MouseScrollDown, MouseScrollUp, MouseUp, Resize,
+        Key, MouseDown, MouseScrollDown, MouseScrollUp, MouseUp, Paste, Resize,
     )
 
 # ── pyte 颜色 → Rich 颜色字符串 ──────────────────────────────────────────────
@@ -402,6 +402,16 @@ class PtyTerminal(Widget):
                 pass
         return b""
 
+    def on_paste(self, event: Paste) -> None:  # type: ignore[override]
+        """转发粘贴/IME 输入到 PTY（macOS IME 中文输入走此路径）。"""
+        if self._master_fd is None:
+            return
+        event.stop()
+        try:
+            os.write(self._master_fd, event.text.encode("utf-8"))
+        except OSError:
+            pass
+
     # ── 渲染 ──────────────────────────────────────────────────────────────────
 
     def _scrollbar_char(self, y: int) -> str | None:
@@ -453,7 +463,10 @@ class PtyTerminal(Widget):
         segments: list[Segment] = []
         for x in range(screen.columns):
             char = row.get(x, _DEFAULT_CHAR)
-            ch = char.data or " "
+            ch = char.data
+            if not ch:
+                # 双宽字符（CJK）右半占位符，跳过；左半 Segment 已占 2 列宽度
+                continue
             fg = _to_rich_color(char.fg) or "#ffffff"
             bg = _to_rich_color(char.bg) or "#000000"
             if ch == " ":

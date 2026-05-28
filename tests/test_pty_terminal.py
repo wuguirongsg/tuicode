@@ -121,3 +121,28 @@ def test_render_line_empty():
     widget._rows = 5
     strip = widget.render_line(0)
     assert strip is not None
+
+
+def test_render_line_cjk_no_extra_space():
+    """CJK 宽字符的右半占位符不应被渲染成额外空格。"""
+    widget = PtyTerminal()
+    widget._cols = 10
+    widget._rows = 3
+    widget._init_pyte(10, 3)
+    screen = widget._pyte_screen
+
+    # 模拟 pyte 写入一个 CJK 宽字符后的 buffer 状态：
+    # 列 0: data="中"，列 1: data=""（右半占位）
+    CJK_CHAR = pyte.screens.Char("中")
+    EMPTY = pyte.screens.Char("")
+    screen.buffer[0][0] = CJK_CHAR
+    screen.buffer[0][1] = EMPTY
+
+    strip = widget.render_line(0)
+    texts = [seg.text for seg in strip if seg.text]
+    # 不应出现空字符串或纯空格在中文字符后
+    assert "中" in texts
+    # 紧跟"中"之后不能是空格（占位符应被跳过）
+    idx = texts.index("中")
+    if idx + 1 < len(texts):
+        assert texts[idx + 1] != ""
