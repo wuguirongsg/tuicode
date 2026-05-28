@@ -11,12 +11,13 @@
 
 **为谁**：使用 Claude Code / Codex / Aider 等终端编程智能体的开发者（重度智能体用户 / SSH 远程开发者 / AI 编程探索者）。
 
-**解决什么**：智能体输出代码要切窗口看、Git 操作要切窗口做、多个智能体没法并行管理、SSH 环境下没有 IDE 级体验——开发者被迫在 CLI 智能体和 GUI IDE 之间不断切上下文。
+**解决什么**：智能体在终端里能写代码，但文件查看、外部变更感知、Git 状态、运行终端和多个智能体会话分散在不同工具中——开发者被迫在 CLI 智能体、编辑器、Git 工具和终端之间不断切上下文。
 
-**一句话定位**：为终端编程智能体设计的统一 TUI 工作台，把"编辑器 + 文件 + 多终端 + Git + 多智能体会话"整合为一致体验（见 [docs/agentdeck_architecture.md](../../docs/agentdeck_architecture.md) §1）。
+**一句话定位**：为终端编程智能体设计的统一 TUI 工作台，把"编辑器 + 文件 + 多终端 + Git + 多智能体会话 + 工作区状态同步"整合为一致体验（见 [docs/agentdeck_architecture.md](../../docs/agentdeck_architecture.md) §1）。
 
 **成功标准**：
 - 目标用户在做日常 AI 编程任务时全程不离开 AgentDeck（编辑、查 diff、跑命令、与多个智能体对话、提交 Git）
+- Claude Code / Codex / Aider 在 PTY 浮窗中工作后，AgentDeck 能自动感知文件和 Git 状态变化
 - 能在 SSH 远程机器上原生使用，不依赖 GUI
 - 同一任务可以并行交给两个智能体对比方案（场景见架构文档 §3.2）
 
@@ -43,6 +44,7 @@
 > 已进入 Sprint 的需求注明 Sprint；取消/调整的功能也记在这里。
 
 - [2026-05-26] Sprint-1 — Phase 1 MVP 全 12 条 feat（见 features.json）
+- [2026-05-28] Phase 1 方向调整 — 从“Adapter 接管工具调用 + 审批”改为“PTY 智能体 + 文件/Git 变化感知”；详见 `.harness/registry/decisions/2026-05-28-observability-first.md`
 
 ---
 
@@ -55,14 +57,14 @@
 **来源：架构文档 §2 核心原则 + §10 技术选型 + §11.2 关键权衡**
 
 - **智能体是一等公民**：不能把 AI 当 IDE 插件做（不能浮窗化、不能侧栏化退化），编辑器/文件树/终端的设计目标是"让智能体更好工作"。
-- **协议驱动，不绑定具体智能体**：新增智能体必须实现 `AgentAdapter` Protocol，禁止在宿主代码里硬编码任何具体智能体的 CLI 行为。
+- **PTY 优先，Adapter 后置**：MVP 默认把成熟 CLI 智能体作为完整 PTY 会话承载；`AgentAdapter` 是 Phase 2+ 深度集成扩展点，不阻塞主路径。
 - **混合布局不可退化**：工作单元（编辑器/智能体会话）必须浮窗化，全局工具（文件树/Git/运行终端）必须固定栅格化。不允许改为"纯分割面板"或"纯自由浮窗"——这是经过权衡的核心判断（§11.2）。
 - **100% TUI**：禁止引入 GUI / Web / Electron / 浏览器渲染。
 - **技术栈固定**：Python 3.11+ + Textual 0.60+。MVP 不允许换语言。性能瓶颈出现时才考虑用 Rust 通过 PyO3 嵌入热点模块。
 - **事件总线唯一通信通道**：模块之间禁止硬编码相互依赖，都走事件总线（`FileOpened`、`CursorMoved`、`AgentMessage`、`ToolCallRequested` 等）。
-- **上下文聚合器是核心引擎**：所有 Adapter 都必须通过聚合器拿上下文，不允许 Adapter 自己直接读项目状态。
+- **工作区状态聚合器是核心引擎**：MVP 聚合当前文件、选区、最近文件变化和 Git 状态，先服务 UI 同步；后续 Adapter / MCP 必须通过聚合器拿上下文。
 - **MVP 编辑器直接用 Textual TextArea**：不要自研编辑器内核；LSP / 多光标 / 折叠等留接口、不实现。
-- **工具调用必须走审批**：智能体的写文件/跑命令/Git 操作一律走 `ToolCallRequested` 事件 + 用户审批，不允许 Adapter 自行执行。
+- **工具调用审批后置**：MVP 不二次接管 Claude Code 等 CLI 智能体的权限提示；`ToolCallRequested` + 审批 UI 只用于 Phase 2+ Adapter / MCP 深度集成模式。
 
 ### 已知坑
 
@@ -73,6 +75,7 @@
 - **Windows 原生 PTY 复杂**：MVP 优先 Linux/macOS/WSL，Windows 原生延后；不要为 Windows 兼容性堵塞主路径。
 - **智能体 CLI 接口变化频繁**：Adapter 层要薄、要抽象稳定，迁移成本可控；不要在宿主层依赖具体智能体的输出格式。
 - **上下文打包过大触发 token 限制**：聚合器必须有 token 预算控制，按优先级裁剪；不要无脑塞全部上下文。
+- **深度接管智能体工具流成本高**：Claude Code 等 CLI 自带权限和工具体系，MVP 不应重复实现；先通过 watcher/Git poller 观测结果。
 - **PTY 控制字符**：Ctrl+C 等控制字符必须正确透传给子进程，鼠标事件也要透传（vim 才能用鼠标）。
 - **终端尺寸变化**：必须用 `TIOCSWINSZ` 通知子进程，否则 TUI 程序渲染会错位。
 

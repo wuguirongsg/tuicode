@@ -8,6 +8,8 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import DirectoryTree, Static
 
+from tuicode.bus import default_bus
+from tuicode.events import FileModified
 from tuicode.i18n import t
 from tuicode.ui.mascot import MascotPanel
 
@@ -58,6 +60,7 @@ class RightPanel(Widget):
     def __init__(self, root: Path | str | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._root = Path(root) if root else Path.cwd()
+        self._unsubscribe_file_modified = None
 
     def compose(self) -> ComposeResult:
         yield MascotPanel(id="rp-mascot")
@@ -66,8 +69,24 @@ class RightPanel(Widget):
             yield Static(t("panel.tab_git"), classes="rp-tab")
         yield DirectoryTree(self._root, id="file-tree")
 
+    def on_mount(self) -> None:
+        self._unsubscribe_file_modified = default_bus.subscribe(
+            FileModified, self._on_file_modified
+        )
+
+    def on_unmount(self) -> None:
+        if self._unsubscribe_file_modified is not None:
+            self._unsubscribe_file_modified()
+            self._unsubscribe_file_modified = None
+
     def set_mascot_state(self, state: str, auto_reset: float = 0.0) -> None:
         self.query_one(MascotPanel).set_state(state, auto_reset)
+
+    def refresh_file_tree(self) -> None:
+        self.query_one("#file-tree", DirectoryTree).reload()
+
+    def _on_file_modified(self, event: FileModified) -> None:
+        self.call_later(self.refresh_file_tree)
 
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected

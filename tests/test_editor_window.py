@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from pathlib import Path
 
 import pytest
@@ -166,6 +167,28 @@ class TestEditorWindowSave:
                 win.action_save()
                 await pilot.pause()
                 assert win._dirty is False
+
+        asyncio.run(run())
+
+
+class TestEditorWindowExternalChange:
+    def test_external_file_modified_marks_title(self, tmp_path: Path):
+        """外部修改已打开文件后，标题应显示 ! 前缀。"""
+        from tuicode.bus import default_bus
+
+        f = tmp_path / "external.py"
+        f.write_text("old", encoding="utf-8")
+
+        async def run():
+            async with EditorApp(f).run_test(headless=True) as pilot:
+                win = await pilot.app.open_editor()
+                await pilot.pause()
+                time.sleep(0.001)
+                f.write_text("new", encoding="utf-8")
+                default_bus.publish(FileModified(f))
+                await pilot.pause()
+                assert win._external_changed is True
+                assert win._title == "!external.py"
 
         asyncio.run(run())
 

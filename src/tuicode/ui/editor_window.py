@@ -79,6 +79,9 @@ class EditorWindow(FloatWindow):
     def __init__(self, path: Path, **kwargs) -> None:
         self._path = path
         self._dirty = False
+        self._external_changed = False
+        self._known_signature = self._read_signature()
+        self._unsubscribe_file_modified = None
         super().__init__(title=path.name, **kwargs)
 
     def compose_body(self) -> ComposeResult:
@@ -94,8 +97,19 @@ class EditorWindow(FloatWindow):
             self._dirty = True
             self._refresh_title()
 
+    def on_mount(self) -> None:
+        super().on_mount()
+        self._unsubscribe_file_modified = default_bus.subscribe(
+            FileModified, self._on_file_modified
+        )
+
+    def on_unmount(self) -> None:
+        if self._unsubscribe_file_modified is not None:
+            self._unsubscribe_file_modified()
+            self._unsubscribe_file_modified = None
+
     def _refresh_title(self) -> None:
-        prefix = "*" if self._dirty else ""
+        prefix = "*" if self._dirty else "!" if self._external_changed else ""
         self._title = f"{prefix}{self._path.name}"
         self._refresh_border()
 
@@ -106,8 +120,27 @@ class EditorWindow(FloatWindow):
         except OSError:
             return
         self._dirty = False
+        self._external_changed = False
+        self._known_signature = self._read_signature()
         self._refresh_title()
         default_bus.publish(FileModified(self._path))
+
+    def _on_file_modified(self, event: FileModified) -> None:
+        if event.path.resolve() != self._path.resolve():
+            return
+        signature = self._read_signature()
+        if signature == self._known_signature:
+            return
+        self._known_signature = signature
+        self._external_changed = True
+        self._refresh_title()
+
+    def _read_signature(self) -> tuple[int, int] | None:
+        try:
+            stat = self._path.stat()
+        except OSError:
+            return None
+        return (stat.st_mtime_ns, stat.st_size)
 
     def _do_close(self) -> None:
         if self._dirty:

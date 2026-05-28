@@ -56,6 +56,10 @@
 
 [2026-05-27 00:15] FIX 浮窗边框改为圆角（╭ ╮ ╰ ╯），border: solid → round，焦点高亮同步更新
 
+[2026-05-28 00:30] DONE feat-010 文件变化感知：WorkspaceWatcher 发布 FileModified，文件树 reload，编辑器外部变更标题标记，28 个相关测试通过
+
+[2026-05-28 00:00] DECISION Phase 1 从 Adapter 接管工具调用调整为 PTY 智能体 + 文件/Git 变化感知，feat-010/012 建议推迟到 Phase 2/3 → decisions/2026-05-28-observability-first.md
+
 [2026-05-27 00:00] DONE feat-005 文件树（DirectoryTree）+ feat-006 编辑器浮窗（EditorWindow + ConfirmCloseModal），feat/003 合并到 master，80 测试全通过 → sessions/2026-05-27-0000.md
 
 [2026-05-26 22:30] DONE feat-003 收尾（拖拽边界/标题栏置顶/ResizeHandle）+ feat-004 窗口任务栏全部完成，28 测试通过，待视觉确认后 merge → sessions/2026-05-26-2200.md
