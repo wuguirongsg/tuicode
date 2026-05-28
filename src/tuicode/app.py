@@ -87,9 +87,19 @@ class TuiCodeApp(App):
         self._workspace_state = WorkspaceStateAggregator()
         self._workspace_watcher = WorkspaceWatcher(".")
         self._git_status_poller = GitStatusPoller(".")
+        self._unsubscribe_file_modified = None
         self.set_interval(1.0, self._workspace_watcher.poll)
         self.set_interval(1.0, self._git_status_poller.poll)
-        default_bus.subscribe(FileModified, lambda _: self._git_status_poller.poll())
+        self._unsubscribe_file_modified = default_bus.subscribe(
+            FileModified,
+            lambda _: self._git_status_poller.poll(),
+        )
+
+    def on_unmount(self) -> None:
+        if self._unsubscribe_file_modified is not None:
+            self._unsubscribe_file_modified()
+            self._unsubscribe_file_modified = None
+        self._workspace_state.close()
 
     def compose(self) -> ComposeResult:
         yield MenuBar()
