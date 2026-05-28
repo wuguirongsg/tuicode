@@ -8,7 +8,7 @@ import pyte
 import pytest
 from textual.app import App, ComposeResult
 
-from tuicode.ui.pty_terminal import PtyTerminal, _char_style, _to_rich_color
+from tuicode.ui.pty_terminal import PtyTerminal, _to_rich_color
 
 
 # ── 颜色转换 ──────────────────────────────────────────────────────────────────
@@ -35,17 +35,19 @@ def test_to_rich_color_hex():
     assert _to_rich_color("#AABBCC") == "#aabbcc"
 
 
-def test_char_style_bold():
-    char = pyte.screens.Char("A", fg="default", bg="default", bold=True)
-    style = _char_style(char)
-    assert style.bold is True
+def test_to_rich_color_pyte_truecolor():
+    # pyte 以不带 # 的 6 位十六进制存储 truecolor
+    assert _to_rich_color("3a7bd5") == "#3a7bd5"
+    assert _to_rich_color("FF8000") == "#ff8000"
+    assert _to_rich_color("000000") == "#000000"
 
 
-def test_char_style_plain():
-    char = pyte.screens.Char("x")
-    style = _char_style(char)
-    assert style.bold is not True
-    assert style.italic is not True
+def test_to_rich_color_pyte_256_string():
+    # pyte 某些版本以字符串存储 256 色索引
+    assert _to_rich_color("0") == "color(0)"
+    assert _to_rich_color("196") == "color(196)"
+    assert _to_rich_color("255") == "color(255)"
+
 
 
 # ── PtyTerminal Widget ────────────────────────────────────────────────────────

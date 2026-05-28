@@ -3,6 +3,7 @@ from textual.theme import Theme
 from textual.widget import Widget
 
 from tuicode import __version__
+from tuicode.ui.agent_terminal_window import AgentTerminalWindow
 from tuicode.ui.editor_window import EditorWindow
 from tuicode.ui.float_window import FloatWindow
 from tuicode.ui.menu_bar import MenuBar
@@ -44,12 +45,13 @@ class MainContent(Widget):
 
 class TuiCodeApp(App):
     TITLE = "TUICODE"
-    CTRL_C_EXITS = False  # Ctrl+C 透传给终端，不退出 App；用 Ctrl+Q 退出
+    CTRL_C_EXITS = False           # Ctrl+C 透传给终端，不退出 App；用 Ctrl+Q 退出
+    ENABLE_COMMAND_PALETTE = False  # Ctrl+P 透传给 PTY 子进程，不打开命令面板
 
     BINDINGS = [
         ("ctrl+q", "quit", "退出"),
         ("ctrl+grave_accent", "focus_terminal", "聚焦终端"),
-        ("ctrl+t", "test_windows", "[临时] 打开测试浮窗"),
+        ("ctrl+t", "new_agent_terminal", "新建智能体终端"),
         ("alt+1", "focus_window(1)", "切换窗口 1"),
         ("alt+2", "focus_window(2)", "切换窗口 2"),
         ("alt+3", "focus_window(3)", "切换窗口 3"),
@@ -129,10 +131,8 @@ class TuiCodeApp(App):
         terminal = self.query_one(PtyTerminal)
         terminal.focus()
 
-    # ── 临时测试 ──────────────────────────────────────────────────────────────
+    # ── 智能体终端 ────────────────────────────────────────────────────────────
 
-    async def action_test_windows(self) -> None:
+    async def action_new_agent_terminal(self) -> None:
         ws = self.query_one(FloatWorkspace)
-        await ws.open_window(FloatWindow("编辑器 — main.py"))
-        await ws.open_window(FloatWindow("Claude Code"))
-        await ws.open_window(FloatWindow("终端输出"))
+        await ws.open_window(AgentTerminalWindow())

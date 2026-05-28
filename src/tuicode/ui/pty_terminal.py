@@ -4,6 +4,7 @@ from __future__ import annotations
 import collections
 import fcntl
 import os
+import re
 import struct
 import termios
 import asyncio
@@ -18,9 +19,16 @@ from textual.widget import Widget
 _DEFAULT_CHAR = pyte.screens.Char(" ")
 _SB_THUMB = Style(color="white")
 _SB_TRACK = Style(color="bright_black")
+_TERM_DEFAULT = Style(color="#ffffff", bgcolor="#000000")
+
+# 扫描 PTY 输出中的鼠标模式开关序列（pyte 不把这些写入 screen.mode）
+_RE_MOUSE_MODE = re.compile(rb"\x1b\[\?(\d+)([hl])")
+_MOUSE_BASIC_MODES = frozenset({1000, 1002, 1003})
 
 if TYPE_CHECKING:
-    from textual.events import Key, MouseScrollDown, MouseScrollUp, Resize
+    from textual.events import (
+        Key, MouseDown, MouseScrollDown, MouseScrollUp, MouseUp, Resize,
+    )
 
 # ── pyte 颜色 → Rich 颜色字符串 ──────────────────────────────────────────────
 
@@ -44,21 +52,22 @@ def _to_rich_color(color: str | int | None) -> str | None:
         return _ANSI_NAMES[low]
     if low.startswith("#") and len(low) == 7:
         return low
+    # pyte 以不带 # 的 6 位十六进制字符串存储 truecolor（如 "3a7bd5"）
+    if len(low) == 6:
+        try:
+            int(low, 16)
+            return f"#{low}"
+        except ValueError:
+            pass
+    # pyte 某些版本以字符串形式存储 256 色索引（如 "196"）
+    try:
+        n = int(low)
+        if 0 <= n <= 255:
+            return f"color({n})"
+    except ValueError:
+        pass
     return None
 
-
-def _char_style(char: pyte.screens.Char) -> Style:
-    fg = _to_rich_color(char.fg)
-    bg = _to_rich_color(char.bg)
-    return Style(
-        color=fg,
-        bgcolor=bg,
-        bold=char.bold,
-        italic=char.italics,
-        underline=char.underscore,
-        strike=char.strikethrough,
-        reverse=char.reverse,
-    )
 
 
 # ── key name → PTY bytes ─────────────────────────────────────────────────────
@@ -95,6 +104,14 @@ _KEY_MAP: dict[str, bytes] = {
     "ctrl+s":       b"\x13", "ctrl+t": b"\x14", "ctrl+u": b"\x15",
     "ctrl+v":       b"\x16", "ctrl+w": b"\x17", "ctrl+x": b"\x18",
     "ctrl+y":       b"\x19", "ctrl+z": b"\x1a",
+    # alt + 方向键
+    "alt+up":       b"\x1b[1;3A",
+    "alt+down":     b"\x1b[1;3B",
+    "alt+right":    b"\x1b[1;3C",
+    "alt+left":     b"\x1b[1;3D",
+    # alt + 常用键
+    "alt+enter":    b"\x1b\r",
+    "alt+backspace": b"\x1b\x7f",
 }
 
 
@@ -158,6 +175,8 @@ class PtyTerminal(Widget):
         self._rows = 24
         self._focus_requested = False
         self._scroll_offset = 0   # 0 = 底部当前视图；>0 = 向上滚
+        self._app_mouse = False      # 子进程是否启用了鼠标跟踪
+        self._app_mouse_sgr = False  # 子进程是否使用 SGR 鼠标编码
 
     # ── 生命周期 ───────────────────────────────────────────────────────────────
 
@@ -186,7 +205,7 @@ class PtyTerminal(Widget):
         self._process = await asyncio.create_subprocess_exec(
             self._shell,
             preexec_fn=_child_setup,
-            env={**os.environ, "TERM": "xterm-256color"},
+            env={**os.environ, "TERM": "xterm-256color", "COLORTERM": "truecolor", "FORCE_COLOR": "3"},
         )
 
         loop = asyncio.get_event_loop()
@@ -211,6 +230,14 @@ class PtyTerminal(Widget):
         try:
             data = os.read(self._master_fd, 4096)
             if data and self._pyte_stream is not None:
+                # 扫描鼠标模式开关（pyte 不跟踪这些私有模式）
+                for m in _RE_MOUSE_MODE.finditer(data):
+                    mode = int(m.group(1))
+                    enable = m.group(2) == b"h"
+                    if mode in _MOUSE_BASIC_MODES:
+                        self._app_mouse = enable
+                    elif mode == 1006:
+                        self._app_mouse_sgr = enable
                 self._pyte_stream.feed(data)
                 # 有新输出时自动滚到底部
                 if self._scroll_offset > 0:
@@ -257,9 +284,51 @@ class PtyTerminal(Widget):
             self._focus_requested = False
             self.focus()
 
+    # ── 鼠标转发辅助 ─────────────────────────────────────────────────────────
+
+    def _mouse_enabled(self) -> bool:
+        """子进程是否已启用鼠标跟踪（从 PTY 输出扫描得到）。"""
+        return self._app_mouse
+
+    def _screen_to_pty(self, screen_x: int, screen_y: int) -> tuple[int, int] | None:
+        """屏幕绝对坐标 → 1-indexed PTY 列/行；越界返回 None。"""
+        r = self.region
+        col = screen_x - r.x - 1   # 减去左边框
+        row = screen_y - r.y - 1   # 减去上边框
+        if col < 0 or row < 0:
+            return None
+        screen = self._pyte_screen
+        if screen and (col >= screen.columns or row >= screen.lines):
+            return None
+        return col + 1, row + 1
+
+    def _write_mouse(self, button: int, col: int, row: int, press: bool) -> None:
+        """将鼠标事件编码为 SGR（首选）或 X10 序列并写入 PTY。"""
+        if self._master_fd is None:
+            return
+        if self._app_mouse_sgr:
+            suffix = "M" if press else "m"
+            data = f"\x1b[<{button};{col};{row}{suffix}".encode()
+        else:
+            if not press:
+                button = 3
+            if col > 222 or row > 222:
+                return
+            data = bytes([0x1b, 0x5b, 0x4d, button + 32, col + 32, row + 32])
+        try:
+            os.write(self._master_fd, data)
+        except OSError:
+            pass
+
     # ── 滚动 ──────────────────────────────────────────────────────────────────
 
     def on_mouse_scroll_up(self, event: MouseScrollUp) -> None:  # type: ignore[override]
+        if self._mouse_enabled() and self._scroll_offset == 0:
+            pos = self._screen_to_pty(event.screen_x, event.screen_y)
+            if pos:
+                self._write_mouse(64, pos[0], pos[1], press=True)
+            event.stop()
+            return
         if self._pyte_screen is None:
             return
         max_offset = len(self._pyte_screen.scrollback)
@@ -269,6 +338,12 @@ class PtyTerminal(Widget):
         event.stop()
 
     def on_mouse_scroll_down(self, event: MouseScrollDown) -> None:  # type: ignore[override]
+        if self._mouse_enabled() and self._scroll_offset == 0:
+            pos = self._screen_to_pty(event.screen_x, event.screen_y)
+            if pos:
+                self._write_mouse(65, pos[0], pos[1], press=True)
+            event.stop()
+            return
         self._scroll_offset = max(self._scroll_offset - self._SCROLL_STEP, 0)
         self._update_scroll_indicator()
         self.refresh()
@@ -280,10 +355,28 @@ class PtyTerminal(Widget):
         else:
             self.border_subtitle = ""
 
-    # ── 焦点 ──────────────────────────────────────────────────────────────────
+    # ── 焦点 + 鼠标点击 ───────────────────────────────────────────────────────
 
-    def on_mouse_down(self) -> None:
+    def on_mouse_down(self, event: MouseDown) -> None:  # type: ignore[override]
         self.focus()
+        if not self._mouse_enabled():
+            return
+        pos = self._screen_to_pty(event.screen_x, event.screen_y)
+        if pos is None:
+            return
+        btn = {1: 0, 2: 1, 3: 2}.get(event.button, 0)
+        self._write_mouse(btn, pos[0], pos[1], press=True)
+        event.stop()
+
+    def on_mouse_up(self, event: MouseUp) -> None:  # type: ignore[override]
+        if not self._mouse_enabled():
+            return
+        pos = self._screen_to_pty(event.screen_x, event.screen_y)
+        if pos is None:
+            return
+        btn = {1: 0, 2: 1, 3: 2}.get(event.button, 0)
+        self._write_mouse(btn, pos[0], pos[1], press=False)
+        event.stop()
 
     # ── 键盘输入 ──────────────────────────────────────────────────────────────
 
@@ -330,12 +423,12 @@ class PtyTerminal(Widget):
     def render_line(self, y: int) -> Strip:
         screen = self._pyte_screen
         if screen is None:
-            return Strip([Segment(" " * self._cols)])
+            return Strip([Segment(" " * self._cols, _TERM_DEFAULT)])
 
         if self._scroll_offset == 0:
             # 正常视图：直接渲染当前 pyte 屏幕
             if y >= screen.lines:
-                return Strip([Segment(" " * screen.columns)])
+                return Strip([Segment(" " * screen.columns, _TERM_DEFAULT)])
             row = screen.buffer[y]
             show_cursor = True
         else:
@@ -347,23 +440,39 @@ class PtyTerminal(Widget):
             view_top = view_bottom - self._rows
             line_idx = view_top + y
             if line_idx < 0 or line_idx >= total:
-                return Strip([Segment(" " * screen.columns)])
+                return Strip([Segment(" " * screen.columns, _TERM_DEFAULT)])
             if line_idx < hist_len:
                 row = list(hist)[line_idx]
             else:
                 screen_y = line_idx - hist_len
                 if screen_y >= screen.lines:
-                    return Strip([Segment(" " * screen.columns)])
+                    return Strip([Segment(" " * screen.columns, _TERM_DEFAULT)])
                 row = screen.buffer[screen_y]
             show_cursor = False
 
         segments: list[Segment] = []
         for x in range(screen.columns):
             char = row.get(x, _DEFAULT_CHAR)
-            style = _char_style(char)
+            ch = char.data or " "
+            fg = _to_rich_color(char.fg) or "#ffffff"
+            bg = _to_rich_color(char.bg) or "#000000"
+            if ch == " ":
+                # 背景单元格：只用颜色，不渲染 underline/bold 等装饰
+                # 规避 pyte 将当前 SGR 属性（含 underline）写入被清除单元格的问题
+                style = Style(color=fg, bgcolor=bg)
+            else:
+                style = Style(
+                    color=fg,
+                    bgcolor=bg,
+                    bold=char.bold,
+                    italic=char.italics,
+                    underline=char.underscore,
+                    strike=char.strikethrough,
+                    reverse=char.reverse,
+                )
             if show_cursor and screen.cursor.x == x and screen.cursor.y == y:
                 style = style + Style(reverse=True)
-            segments.append(Segment(char.data or " ", style))
+            segments.append(Segment(ch, style))
 
         sb = self._scrollbar_char(y)
         if sb is not None:
