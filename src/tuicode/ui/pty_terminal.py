@@ -25,6 +25,9 @@ _TERM_DEFAULT = Style(color="#ffffff", bgcolor="#000000")
 _RE_MOUSE_MODE = re.compile(rb"\x1b\[\?(\d+)([hl])")
 _MOUSE_BASIC_MODES = frozenset({1000, 1002, 1003})
 
+# 扫描 bracketed paste 模式开关（\x1b[?2004h = 启用，\x1b[?2004l = 禁用）
+_RE_BPASTE_MODE = re.compile(rb"\x1b\[\?2004([hl])")
+
 if TYPE_CHECKING:
     from textual.events import (
         Key, MouseDown, MouseScrollDown, MouseScrollUp, MouseUp, Paste, Resize,
@@ -177,6 +180,7 @@ class PtyTerminal(Widget):
         self._scroll_offset = 0   # 0 = 底部当前视图；>0 = 向上滚
         self._app_mouse = False      # 子进程是否启用了鼠标跟踪
         self._app_mouse_sgr = False  # 子进程是否使用 SGR 鼠标编码
+        self._bracketed_paste = False  # 子进程是否启用了 bracketed paste mode
 
     # ── 生命周期 ───────────────────────────────────────────────────────────────
 
@@ -230,7 +234,7 @@ class PtyTerminal(Widget):
         try:
             data = os.read(self._master_fd, 4096)
             if data and self._pyte_stream is not None:
-                # 扫描鼠标模式开关（pyte 不跟踪这些私有模式）
+                # 扫描鼠标模式 + bracketed paste 模式开关（pyte 不跟踪私有模式）
                 for m in _RE_MOUSE_MODE.finditer(data):
                     mode = int(m.group(1))
                     enable = m.group(2) == b"h"
@@ -238,6 +242,8 @@ class PtyTerminal(Widget):
                         self._app_mouse = enable
                     elif mode == 1006:
                         self._app_mouse_sgr = enable
+                for m in _RE_BPASTE_MODE.finditer(data):
+                    self._bracketed_paste = m.group(1) == b"h"
                 self._pyte_stream.feed(data)
                 # 有新输出时自动滚到底部
                 if self._scroll_offset > 0:
@@ -403,12 +409,20 @@ class PtyTerminal(Widget):
         return b""
 
     def on_paste(self, event: Paste) -> None:  # type: ignore[override]
-        """转发粘贴/IME 输入到 PTY（macOS IME 中文输入走此路径）。"""
+        """转发粘贴/IME 输入到 PTY（macOS IME 中文输入走此路径）。
+
+        若子进程启用了 bracketed paste mode，包上 \x1b[200~...\x1b[201~ 标记，
+        让子进程 readline 走粘贴路径而非逐字符 echo 路径——避免 CJK 宽字符宽度
+        计算错误导致的"半个空格"显示异常。
+        """
         if self._master_fd is None:
             return
         event.stop()
         try:
-            os.write(self._master_fd, event.text.encode("utf-8"))
+            data = event.text.encode("utf-8")
+            if self._bracketed_paste:
+                data = b"\x1b[200~" + data + b"\x1b[201~"
+            os.write(self._master_fd, data)
         except OSError:
             pass
 
