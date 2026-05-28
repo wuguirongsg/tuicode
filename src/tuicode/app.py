@@ -13,6 +13,7 @@ from tuicode.ui.taskbar import WindowTaskBar
 from tuicode.ui.pty_terminal import PtyTerminal
 from tuicode.ui.terminal_strip import TerminalStrip
 from tuicode.ui.workspace import FloatWorkspace
+from tuicode.workspace_state import WorkspaceStateAggregator
 from tuicode.workspace_watcher import WorkspaceWatcher
 
 
@@ -80,6 +81,7 @@ class TuiCodeApp(App):
             dark=True,
         ))
         self.theme = "cyberpunk"
+        self._workspace_state = WorkspaceStateAggregator()
         self._workspace_watcher = WorkspaceWatcher(".")
         self.set_interval(1.0, self._workspace_watcher.poll)
 

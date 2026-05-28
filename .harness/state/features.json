@@ -101,7 +101,7 @@
         "feat-002",
         "feat-010"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "feat-012",

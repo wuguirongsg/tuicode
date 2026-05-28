@@ -56,6 +56,8 @@
 
 [2026-05-27 00:15] FIX 浮窗边框改为圆角（╭ ╮ ╰ ╯），border: solid → round，焦点高亮同步更新
 
+[2026-05-28 01:00] DONE feat-011 工作区状态聚合器：维护当前文件、选区、最近 10 条文件变化和 Git 摘要，23 个相关测试通过
+
 [2026-05-28 00:30] DONE feat-010 文件变化感知：WorkspaceWatcher 发布 FileModified，文件树 reload，编辑器外部变更标题标记，28 个相关测试通过
 
 [2026-05-28 00:00] DECISION Phase 1 从 Adapter 接管工具调用调整为 PTY 智能体 + 文件/Git 变化感知，feat-010/012 建议推迟到 Phase 2/3 → decisions/2026-05-28-observability-first.md

@@ -7,12 +7,14 @@ from pathlib import Path
 
 import pytest
 from textual.app import App, ComposeResult
+from textual.document._document import Selection
 from textual.widgets import TextArea
 
 from tuicode.bus import EventBus
 from tuicode.events import FileModified
 from tuicode.ui.editor_window import ConfirmCloseModal, EditorWindow
 from tuicode.ui.workspace import FloatWorkspace
+from tuicode.workspace_state import WorkspaceStateAggregator
 
 
 # ── 工具 App ──────────────────────────────────────────────────────────────────
@@ -189,6 +191,30 @@ class TestEditorWindowExternalChange:
                 await pilot.pause()
                 assert win._external_changed is True
                 assert win._title == "!external.py"
+
+        asyncio.run(run())
+
+
+class TestEditorWindowWorkspaceState:
+    def test_selection_updates_workspace_context(self, tmp_path: Path):
+        """编辑器选区变化后，聚合器应能返回选中文本。"""
+        f = tmp_path / "selection.py"
+        f.write_text("hello world", encoding="utf-8")
+        aggregator = WorkspaceStateAggregator()
+
+        async def run():
+            try:
+                async with EditorApp(f).run_test(headless=True) as pilot:
+                    win = await pilot.app.open_editor()
+                    await pilot.pause()
+                    ta = win.query_one("#editor-textarea", TextArea)
+                    ta.selection = Selection((0, 0), (0, 5))
+                    await pilot.pause()
+                    ctx = aggregator.get_context()
+                    assert ctx.active_file == f
+                    assert ctx.selection_text == "hello"
+            finally:
+                aggregator.close()
 
         asyncio.run(run())
 

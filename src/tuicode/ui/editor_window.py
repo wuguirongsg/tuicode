@@ -9,7 +9,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Static, TextArea
 
 from tuicode.bus import default_bus
-from tuicode.events import FileModified
+from tuicode.events import FileModified, FileOpened, SelectionChanged
 from tuicode.i18n import t
 from tuicode.ui.float_window import FloatWindow
 
@@ -102,6 +102,7 @@ class EditorWindow(FloatWindow):
         self._unsubscribe_file_modified = default_bus.subscribe(
             FileModified, self._on_file_modified
         )
+        default_bus.publish(FileOpened(self._path))
 
     def on_unmount(self) -> None:
         if self._unsubscribe_file_modified is not None:
@@ -112,6 +113,22 @@ class EditorWindow(FloatWindow):
         prefix = "*" if self._dirty else "!" if self._external_changed else ""
         self._title = f"{prefix}{self._path.name}"
         self._refresh_border()
+
+    def on_text_area_selection_changed(
+        self, event: TextArea.SelectionChanged
+    ) -> None:
+        start_line, start_col = event.selection.start
+        end_line, end_col = event.selection.end
+        default_bus.publish(
+            SelectionChanged(
+                file=self._path,
+                start_line=start_line,
+                start_col=start_col,
+                end_line=end_line,
+                end_col=end_col,
+                text=event.text_area.selected_text,
+            )
+        )
 
     def action_save(self) -> None:
         content = self.query_one("#editor-textarea", TextArea).text
