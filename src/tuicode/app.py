@@ -45,7 +45,8 @@ class MainContent(Widget):
 
 class TuiCodeApp(App):
     TITLE = "TUICODE"
-    CTRL_C_EXITS = False  # Ctrl+C 透传给终端，不退出 App；用 Ctrl+Q 退出
+    CTRL_C_EXITS = False           # Ctrl+C 透传给终端，不退出 App；用 Ctrl+Q 退出
+    ENABLE_COMMAND_PALETTE = False  # Ctrl+P 透传给 PTY 子进程，不打开命令面板
 
     BINDINGS = [
         ("ctrl+q", "quit", "退出"),

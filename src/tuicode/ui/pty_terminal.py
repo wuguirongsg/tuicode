@@ -4,6 +4,7 @@ from __future__ import annotations
 import collections
 import fcntl
 import os
+import re
 import struct
 import termios
 import asyncio
@@ -19,6 +20,10 @@ _DEFAULT_CHAR = pyte.screens.Char(" ")
 _SB_THUMB = Style(color="white")
 _SB_TRACK = Style(color="bright_black")
 _TERM_DEFAULT = Style(color="#ffffff", bgcolor="#000000")
+
+# 扫描 PTY 输出中的鼠标模式开关序列（pyte 不把这些写入 screen.mode）
+_RE_MOUSE_MODE = re.compile(rb"\x1b\[\?(\d+)([hl])")
+_MOUSE_BASIC_MODES = frozenset({1000, 1002, 1003})
 
 if TYPE_CHECKING:
     from textual.events import (
@@ -170,6 +175,8 @@ class PtyTerminal(Widget):
         self._rows = 24
         self._focus_requested = False
         self._scroll_offset = 0   # 0 = 底部当前视图；>0 = 向上滚
+        self._app_mouse = False      # 子进程是否启用了鼠标跟踪
+        self._app_mouse_sgr = False  # 子进程是否使用 SGR 鼠标编码
 
     # ── 生命周期 ───────────────────────────────────────────────────────────────
 
@@ -223,6 +230,14 @@ class PtyTerminal(Widget):
         try:
             data = os.read(self._master_fd, 4096)
             if data and self._pyte_stream is not None:
+                # 扫描鼠标模式开关（pyte 不跟踪这些私有模式）
+                for m in _RE_MOUSE_MODE.finditer(data):
+                    mode = int(m.group(1))
+                    enable = m.group(2) == b"h"
+                    if mode in _MOUSE_BASIC_MODES:
+                        self._app_mouse = enable
+                    elif mode == 1006:
+                        self._app_mouse_sgr = enable
                 self._pyte_stream.feed(data)
                 # 有新输出时自动滚到底部
                 if self._scroll_offset > 0:
@@ -272,9 +287,8 @@ class PtyTerminal(Widget):
     # ── 鼠标转发辅助 ─────────────────────────────────────────────────────────
 
     def _mouse_enabled(self) -> bool:
-        """子进程是否已启用鼠标跟踪（pyte 私有模式 1000/1002/1003）。"""
-        screen = self._pyte_screen
-        return screen is not None and bool(screen.mode & {1000, 1002, 1003})
+        """子进程是否已启用鼠标跟踪（从 PTY 输出扫描得到）。"""
+        return self._app_mouse
 
     def _screen_to_pty(self, screen_x: int, screen_y: int) -> tuple[int, int] | None:
         """屏幕绝对坐标 → 1-indexed PTY 列/行；越界返回 None。"""
@@ -292,9 +306,7 @@ class PtyTerminal(Widget):
         """将鼠标事件编码为 SGR（首选）或 X10 序列并写入 PTY。"""
         if self._master_fd is None:
             return
-        screen = self._pyte_screen
-        sgr = screen is not None and 1006 in screen.mode
-        if sgr:
+        if self._app_mouse_sgr:
             suffix = "M" if press else "m"
             data = f"\x1b[<{button};{col};{row}{suffix}".encode()
         else:
