@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-28 20:30] CONSTRAINT 性能卡顿非本次改动引起：PTY _on_pty_readable 每次读取都调 refresh()，Agent 高频输出时是主要压力源；跑马灯改动渲染量不变
+
 [2026-05-28 20:10] FIX 跑马灯效果改为只在新窗口打开时播放：on_mount 加 _start_marquee()，移除 on_focus/on_descendant_focus 里的触发逻辑
 
 [2026-05-28 19:00] CONSTRAINT iTerm2 中文 IME 问题搁置：Paste 事件未到达 PtyTerminal（日志确认），后续从 Textual _app.py Paste 分发逻辑入手排查；Terminal.app 中文输入正常可用
