@@ -5,8 +5,9 @@ import asyncio
 from pathlib import Path
 
 from textual.app import App, ComposeResult
-from textual.widgets import DirectoryTree
+from textual.widgets import DirectoryTree, Static
 
+from tuicode.events import GitStatusChanged
 from tuicode.ui.right_panel import RightPanel
 
 
@@ -54,6 +55,16 @@ class TestRightPanelCompose:
                 await pilot.pause()
                 tabs = pilot.app.query_one("#rp-tabs")
                 assert tabs is not None
+
+        asyncio.run(run())
+
+    def test_contains_git_status(self, tmp_path: Path):
+        """RightPanel 应包含 Git 状态区域。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                await pilot.pause()
+                git_status = pilot.app.query_one("#git-status", Static)
+                assert "git:" in str(git_status.content)
 
         asyncio.run(run())
 
@@ -123,3 +134,26 @@ class TestFileRequested:
         """传入 root 参数时应使用该路径。"""
         panel = RightPanel(root=tmp_path)
         assert panel._root == tmp_path
+
+
+class TestGitStatus:
+    def test_git_status_changed_updates_panel(self, tmp_path: Path):
+        """GitStatusChanged 事件应刷新右栏 Git 状态文本。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                await pilot.pause()
+                panel = pilot.app.query_one(RightPanel)
+                panel.update_git_status(
+                    GitStatusChanged(
+                        branch="main",
+                        changed_files=(" M app.py", "?? new.py"),
+                    )
+                )
+                await pilot.pause()
+                git_status = pilot.app.query_one("#git-status", Static)
+                content = str(git_status.content)
+                assert "main" in content
+                assert "2 changed" in content
+                assert " M app.py" in content
+
+        asyncio.run(run())

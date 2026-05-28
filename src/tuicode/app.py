@@ -3,6 +3,9 @@ from textual.theme import Theme
 from textual.widget import Widget
 
 from tuicode import __version__
+from tuicode.bus import default_bus
+from tuicode.events import FileModified
+from tuicode.git_status import GitStatusPoller
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
 from tuicode.ui.editor_window import EditorWindow
 from tuicode.ui.float_window import FloatWindow
@@ -83,7 +86,10 @@ class TuiCodeApp(App):
         self.theme = "cyberpunk"
         self._workspace_state = WorkspaceStateAggregator()
         self._workspace_watcher = WorkspaceWatcher(".")
+        self._git_status_poller = GitStatusPoller(".")
         self.set_interval(1.0, self._workspace_watcher.poll)
+        self.set_interval(1.0, self._git_status_poller.poll)
+        default_bus.subscribe(FileModified, lambda _: self._git_status_poller.poll())
 
     def compose(self) -> ComposeResult:
         yield MenuBar()
