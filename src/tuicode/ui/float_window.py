@@ -12,6 +12,26 @@ from textual.widgets import Static
 
 from tuicode.i18n import t
 
+
+def _hsl_to_hex(h: float, s: float, lightness: float) -> str:
+    """HSL → #rrggbb。h: 0-360, s/l: 0-1。"""
+    c = (1.0 - abs(2 * lightness - 1)) * s
+    x = c * (1.0 - abs((h / 60.0) % 2 - 1.0))
+    m = lightness - c / 2.0
+    if h < 60:
+        r1, g1, b1 = c, x, 0.0
+    elif h < 120:
+        r1, g1, b1 = x, c, 0.0
+    elif h < 180:
+        r1, g1, b1 = 0.0, c, x
+    elif h < 240:
+        r1, g1, b1 = 0.0, x, c
+    elif h < 300:
+        r1, g1, b1 = x, 0.0, c
+    else:
+        r1, g1, b1 = c, 0.0, x
+    return f"#{int((r1+m)*255):02x}{int((g1+m)*255):02x}{int((b1+m)*255):02x}"
+
 # 霓虹色循环 — 每个新浮窗取下一个颜色
 _NEON_COLORS: itertools.cycle = itertools.cycle([
     "#00d4ff",  # 青
@@ -75,6 +95,9 @@ class FloatWindow(Widget):
 
     can_focus = True
 
+    MARQUEE_TICKS    = 32    # 32 × 40ms ≈ 1.3s 走完一圈
+    MARQUEE_INTERVAL = 0.04
+
     class Closed(Message):
         def __init__(self, window: "FloatWindow") -> None:
             super().__init__()
@@ -137,6 +160,8 @@ class FloatWindow(Widget):
         self._border_color = next(_NEON_COLORS)
         self._dragging = False
         self._drag_last: Offset = Offset(0, 0)
+        self._marquee_timer = None
+        self._marquee_tick: int = 0
 
     def compose(self) -> ComposeResult:
         with Widget(id="win-body"):
@@ -163,19 +188,56 @@ class FloatWindow(Widget):
         )
         self.styles.border = ("round", self._border_color)
 
+    # ── 跑马灯动画（按侧渐变 + 彩虹色相）────────────────────────────────────────
+    # 四条边顺时针：上=青 右=紫 下=粉 左=绿，光头扫过时亮起，拖尾渐暗
+    _SIDE_HUES = (195, 270, 330, 130)
+
+    def _start_marquee(self) -> None:
+        if self._marquee_timer is not None:
+            self._marquee_timer.stop()
+        self._marquee_tick = 0
+        # 动画期间压暗底色，让彩色光带更显眼
+        bc = self._border_color.lstrip("#")
+        br, bg, bb = int(bc[0:2], 16), int(bc[2:4], 16), int(bc[4:6], 16)
+        self.styles.border = ("round", f"#{br//5:02x}{bg//5:02x}{bb//5:02x}")
+        self._marquee_timer = self.set_interval(self.MARQUEE_INTERVAL, self._marquee_step)
+
+    def _stop_marquee(self) -> None:
+        if self._marquee_timer is not None:
+            self._marquee_timer.stop()
+            self._marquee_timer = None
+
+    def _marquee_step(self) -> None:
+        tick = self._marquee_tick
+        self._marquee_tick += 1
+        if tick >= self.MARQUEE_TICKS:
+            self._stop_marquee()
+            self.styles.border = ("round", "#e0f7ff")
+            return
+        head = (tick / self.MARQUEE_TICKS) * 4.0  # 0..4 顺时针扫过四条边
+        for side, hue in enumerate(self._SIDE_HUES):
+            dist = (head - side) % 4
+            brightness = max(0.0, 1.0 - dist / 1.5)
+            color = _hsl_to_hex(hue, 1.0, 0.08 + 0.67 * brightness)
+            setattr(self.styles, ("border_top", "border_right", "border_bottom", "border_left")[side],
+                    ("round", color))
+
     # ── 焦点高亮 ──────────────────────────────────────────────────────────────
 
     def on_focus(self, event: events.Focus) -> None:
-        self.styles.border = ("round", "#e0f7ff")
+        self._start_marquee()
 
     def on_blur(self, event: events.Blur) -> None:
+        self._stop_marquee()
         self.styles.border = ("round", self._border_color)
 
     def on_descendant_focus(self, event: events.DescendantFocus) -> None:
-        self.styles.border = ("round", "#e0f7ff")
+        if self._marquee_timer is None:
+            self._start_marquee()
 
     def on_descendant_blur(self, event: events.DescendantBlur) -> None:
-        self.styles.border = ("round", self._border_color)
+        if self._marquee_timer is None:
+            self.styles.border = ("round", self._border_color)
 
     # ── 置顶 ──────────────────────────────────────────────────────────────────
 
