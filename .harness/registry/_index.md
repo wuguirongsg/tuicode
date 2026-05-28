@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-28 16:08] DONE feat-014 Git diff 只读预览：GitFileList 选中文件打开 DiffPreviewWindow，117 测试全通过 → sessions/2026-05-28-1608.md
+
 [2026-05-28 16:04] DONE feat-013 Phase 1 全链路验证与 pyte 环境修复：新增 App 级观测链路测试，112 测试全通过 → sessions/2026-05-28-1604.md
 
 [2026-05-28 15:57] PLAN Phase 2A Agent 工作流打磨：新增 feat-013 至 feat-018，目标从观测变化推进到审查 diff、布局切换、多 Agent 会话和 Git 收尾

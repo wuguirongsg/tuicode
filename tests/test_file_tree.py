@@ -8,7 +8,7 @@ from textual.app import App, ComposeResult
 from textual.widgets import DirectoryTree, Static
 
 from tuicode.events import GitStatusChanged
-from tuicode.ui.right_panel import RightPanel
+from tuicode.ui.right_panel import GitFileList, RightPanel
 
 
 # ── 工具 App ──────────────────────────────────────────────────────────────────
@@ -154,6 +154,31 @@ class TestGitStatus:
                 content = str(git_status.content)
                 assert "main" in content
                 assert "2 changed" in content
-                assert " M app.py" in content
+                git_files = pilot.app.query_one("#git-files", GitFileList)
+                assert git_files._lines == (" M app.py", "?? new.py")
 
         asyncio.run(run())
+
+    def test_git_file_selection_posts_diff_requested(self, tmp_path: Path):
+        """选中 Git 文件列表项应触发 DiffRequested 消息。"""
+        received: list[Path] = []
+
+        async def run():
+            class _App(PanelApp):
+                def on_right_panel_diff_requested(
+                    self, msg: RightPanel.DiffRequested
+                ) -> None:
+                    received.append(msg.path)
+
+            async with _App(tmp_path).run_test(headless=True) as pilot:
+                await pilot.pause()
+                panel = pilot.app.query_one(RightPanel)
+                panel.update_git_status(
+                    GitStatusChanged(branch="main", changed_files=(" M app.py",))
+                )
+                git_files = pilot.app.query_one("#git-files", GitFileList)
+                git_files.post_message(GitFileList.Selected(" M app.py"))
+                await pilot.pause()
+
+        asyncio.run(run())
+        assert received == [tmp_path / "app.py"]

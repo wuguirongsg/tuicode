@@ -2,7 +2,7 @@
   "_readme": "只允许把 passes 从 false 改成 true。禁止删除条目或修改 description。违反视为严重错误。",
   "_project": "TuiCode",
   "_sprint": "Phase 2A — Agent 工作流打磨",
-  "_updated": "2026-05-28T16:04",
+  "_updated": "2026-05-28T16:08",
   "features": [
     {
       "id": "feat-001",
@@ -132,7 +132,7 @@
         "feat-012",
         "feat-013"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "feat-015",

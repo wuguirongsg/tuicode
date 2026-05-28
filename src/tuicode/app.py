@@ -5,8 +5,10 @@ from textual.widget import Widget
 from tuicode import __version__
 from tuicode.bus import default_bus
 from tuicode.events import FileModified
+from tuicode.git_diff import GitDiffService
 from tuicode.git_status import GitStatusPoller
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
+from tuicode.ui.diff_preview_window import DiffPreviewWindow
 from tuicode.ui.editor_window import EditorWindow
 from tuicode.ui.float_window import FloatWindow
 from tuicode.ui.menu_bar import MenuBar
@@ -87,6 +89,7 @@ class TuiCodeApp(App):
         self._workspace_state = WorkspaceStateAggregator()
         self._workspace_watcher = WorkspaceWatcher(".")
         self._git_status_poller = GitStatusPoller(".")
+        self._git_diff_service = GitDiffService(".")
         self._unsubscribe_file_modified = None
         self.set_interval(1.0, self._workspace_watcher.poll)
         self.set_interval(1.0, self._git_status_poller.poll)
@@ -145,6 +148,13 @@ class TuiCodeApp(App):
                 return
         ws = self.query_one(FloatWorkspace)
         await ws.open_window(EditorWindow(msg.path))
+
+    async def on_right_panel_diff_requested(
+        self, msg: RightPanel.DiffRequested
+    ) -> None:
+        diff = self._git_diff_service.file_diff(msg.path)
+        ws = self.query_one(FloatWorkspace)
+        await ws.open_window(DiffPreviewWindow(msg.path, diff))
 
     # ── 终端聚焦 ──────────────────────────────────────────────────────────────
 
