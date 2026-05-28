@@ -13,19 +13,59 @@ from tuicode.events import FileModified, FileOpened, SelectionChanged
 from tuicode.i18n import t
 from tuicode.ui.float_window import FloatWindow
 
+_SUPPORTED_TEXTAREA_LANGUAGES = frozenset(
+    {
+        "bash",
+        "css",
+        "go",
+        "html",
+        "java",
+        "javascript",
+        "json",
+        "markdown",
+        "python",
+        "regex",
+        "rust",
+        "sql",
+        "toml",
+        "xml",
+        "yaml",
+    }
+)
+
 _LANG_MAP: dict[str, str] = {
-    ".py": "python",
+    ".bash": "bash",
+    ".cjs": "javascript",
+    ".css": "css",
+    ".go": "go",
+    ".htm": "html",
+    ".html": "html",
+    ".java": "java",
     ".js": "javascript",
-    ".ts": "typescript",
     ".json": "json",
+    ".jsonl": "json",
+    ".ksh": "bash",
     ".md": "markdown",
+    ".mjs": "javascript",
+    ".py": "python",
+    ".regex": "regex",
+    ".rs": "rust",
+    ".sh": "bash",
+    ".sql": "sql",
+    ".svg": "xml",
+    ".toml": "toml",
+    ".xml": "xml",
     ".yaml": "yaml",
     ".yml": "yaml",
-    ".html": "html",
-    ".css": "css",
-    ".sh": "bash",
-    ".toml": "toml",
+    ".zsh": "bash",
 }
+
+
+def _detect_language(path: Path) -> str | None:
+    language = _LANG_MAP.get(path.suffix.lower())
+    if language in _SUPPORTED_TEXTAREA_LANGUAGES:
+        return language
+    return None
 
 
 class ConfirmCloseModal(ModalScreen[bool]):
@@ -89,7 +129,7 @@ class EditorWindow(FloatWindow):
             content = self._path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             content = ""
-        lang = _LANG_MAP.get(self._path.suffix)
+        lang = _detect_language(self._path)
         yield TextArea(content, language=lang, id="editor-textarea", show_line_numbers=True)
 
     def on_text_area_changed(self, event: TextArea.Changed) -> None:

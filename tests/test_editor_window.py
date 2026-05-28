@@ -226,16 +226,50 @@ class TestLanguageDetection:
     @pytest.mark.parametrize("suffix,expected_lang", [
         (".py", "python"),
         (".js", "javascript"),
-        (".ts", "typescript"),
+        (".mjs", "javascript"),
         (".json", "json"),
         (".md", "markdown"),
         (".sh", "bash"),
+        (".go", "go"),
+        (".rs", "rust"),
+        (".sql", "sql"),
+        (".svg", "xml"),
+        (".ts", None),
         (".xyz", None),
     ])
     def test_detect_language_by_suffix(self, suffix: str, expected_lang: str | None, tmp_path: Path):
-        """根据文件后缀正确检测语言，未知后缀返回 None。"""
-        from tuicode.ui.editor_window import _LANG_MAP
-        assert _LANG_MAP.get(suffix) == expected_lang
+        """根据文件后缀正确检测 TextArea 支持的语言，不支持则返回 None。"""
+        from tuicode.ui.editor_window import _detect_language
+
+        assert _detect_language(tmp_path / f"file{suffix}") == expected_lang
+
+    def test_opened_text_area_receives_detected_language(self, tmp_path: Path):
+        """打开支持的代码文件时，TextArea 应启用对应语言。"""
+        f = tmp_path / "hello.py"
+        f.write_text("print('hello')", encoding="utf-8")
+
+        async def run():
+            async with EditorApp(f).run_test(headless=True) as pilot:
+                win = await pilot.app.open_editor()
+                await pilot.pause()
+                ta = win.query_one("#editor-textarea", TextArea)
+                assert ta.language == "python"
+
+        asyncio.run(run())
+
+    def test_opened_text_area_falls_back_for_unsupported_language(self, tmp_path: Path):
+        """Textual 未内置的语言应回退纯文本，避免 syntax extra 启用后崩溃。"""
+        f = tmp_path / "types.ts"
+        f.write_text("const x: number = 1", encoding="utf-8")
+
+        async def run():
+            async with EditorApp(f).run_test(headless=True) as pilot:
+                win = await pilot.app.open_editor()
+                await pilot.pause()
+                ta = win.query_one("#editor-textarea", TextArea)
+                assert ta.language is None
+
+        asyncio.run(run())
 
 
 # ── 测试：关闭行为 ────────────────────────────────────────────────────────────

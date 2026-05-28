@@ -87,3 +87,5 @@
 [2026-05-26] Textual `layers` 仅控制 z 渲染顺序，`offset` 始终相对 widget 在垂直布局中的堆叠基准位置 —— 无原生 absolute 定位支持。浮窗真正自由定位需用 stack_y 补偿（当前方案）或将窗口挂载到 Screen 而非子容器（备选）。
 
 [2026-05-28] Textual 8.x 不原生支持传统下拉菜单 — vertical layout 强制子 widget 占满父容器宽度；layer/layers 机制在完整 App 的 CSS 层叠环境中行为不稳定（孤立脚本有效，完整 App 中 width 约束被覆盖）。结论：菜单栏保持静态占位，后续用命令面板（Ctrl+Shift+P，全屏模态）替代所有菜单入口，规划至 Phase 2。
+
+[2026-05-28] Textual TextArea 语法高亮依赖 `textual[syntax]` 的 tree-sitter extras；启用后只能传内置支持的语言名，未内置的 `diff` / `typescript` 等必须回退纯文本或单独注册 parser/query，否则会在打开 TextArea 时抛错。
