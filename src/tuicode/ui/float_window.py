@@ -95,8 +95,8 @@ class FloatWindow(Widget):
 
     can_focus = True
 
-    MARQUEE_TICKS    = 32    # 32 × 40ms ≈ 1.3s 走完一圈
-    MARQUEE_INTERVAL = 0.04
+    MARQUEE_TICKS    = 28    # 28 × 25ms ≈ 0.7s 走完一圈
+    MARQUEE_INTERVAL = 0.025
 
     class Closed(Message):
         def __init__(self, window: "FloatWindow") -> None:
