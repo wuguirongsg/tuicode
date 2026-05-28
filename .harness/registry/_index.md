@@ -16,7 +16,7 @@
 
 <!-- 新条目追加到这里（上方） -->
 
-[2026-05-27 10:30] DONE feat-008 智能体终端浮窗（AgentTerminalWindow），Ctrl+Shift+T 打开，10 测试通过，99 总测试无回归
+[2026-05-27 10:30] DONE feat-008 智能体终端浮窗（AgentTerminalWindow），Ctrl+Shift+T 打开，10 测试通过，99 总测试无回归 → sessions/2026-05-27-1030.md
 
 [2026-05-27 10:00] FIX 机器人去掉最下排 Braille 行，面板高度 6→5，89 测试通过
 
