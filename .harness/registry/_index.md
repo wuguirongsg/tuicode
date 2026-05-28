@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-28] CONSTRAINT 菜单下拉 spike 结论：Textual 8.x vertical layout 不支持固定宽度子 widget；改用命令面板方案（Phase 2）
+
 [2026-05-28] DISCOVER 确认菜单栏未排入任何阶段计划；命令面板（Ctrl+Shift+P）规划在 Phase 2
 
 [2026-05-28] DONE 浮窗激活跑马灯动画 — 四侧彩虹渐变（上青右紫下粉左绿），1.3s 走完一圈，99 测试无回归
