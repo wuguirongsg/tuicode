@@ -16,6 +16,30 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-28 20:10] FIX 跑马灯效果改为只在新窗口打开时播放：on_mount 加 _start_marquee()，移除 on_focus/on_descendant_focus 里的触发逻辑
+
+[2026-05-28 19:00] CONSTRAINT iTerm2 中文 IME 问题搁置：Paste 事件未到达 PtyTerminal（日志确认），后续从 Textual _app.py Paste 分发逻辑入手排查；Terminal.app 中文输入正常可用
+
+[2026-05-28 18:45] CONSTRAINT iTerm2 中文 IME 输入已知问题：Textual 收到 Space 但 IME 组合字符（Paste 事件）完全未到达 PtyTerminal，原因待查（Textual 内部路由 or iTerm2 未送达），暂搁置，后续专项解决
+
+[2026-05-28 18:30] WIP iTerm2 中文 IME 诊断第二轮：日志确认中文不产生任何 Key/Paste 事件，加 on_message 拦截所有消息类型 + KEY bytes 字段，待用户反馈第二轮日志
+
+[2026-05-28 18:15] WIP iTerm2 中文 IME 诊断：加 _dbg 函数写 /tmp/tuicode_input.log，记录 on_key/on_paste 收到的事件，待用户反馈日志后确定修复方向
+
+[2026-05-28 18:00] CONSTRAINT iTerm2 中文 IME 输入根本原因确认：Textual raw mode 消费 Space 键导致 IME 无法确认组合字符；Terminal.app 正常，iTerm2 无代码级修复；建议用剪贴板粘贴或做"中文输入栏"功能
+
+[2026-05-28 17:45] FIX PTY bracketed paste：子进程启用 ?2004h 时包裹 \x1b[200~...\x1b[201~，修复 iTerm2 中文 readline echo 宽字符偏移"半个空格"，127 测试通过
+
+[2026-05-28 17:30] VERIFY iTerm2 中文输入仍不正常，待确认英文是否可用、具体失败路径；列出 macOS 主流终端供多终端测试
+
+[2026-05-28 17:15] FIX PTY 终端 CJK 宽字符：跳过右半占位符修复间距 + 新增 on_paste 修复 iTerm2 中文输入丢失，127 测试通过
+
+[2026-05-28 17:00] FIX 编辑器语法高亮：安装缺失的 textual[syntax] extra（tree-sitter-python 等 15 个包），TextArea language 参数恢复生效，126 测试通过
+
+[2026-05-28 16:45] FIX diff 预览窗口语法高亮：用 _colorize_diff + Static(markup=True) 替换无色 TextArea，+/- 行染绿/红，@@ 青色，126 测试通过
+
+[2026-05-28 16:28] DONE 编辑器语法高亮：启用 textual[syntax] 依赖、补齐语言检测与回归，124 测试通过 → sessions/2026-05-28-1628.md
+
 [2026-05-28 16:08] DONE feat-014 Git diff 只读预览：GitFileList 选中文件打开 DiffPreviewWindow，117 测试全通过 → sessions/2026-05-28-1608.md
 
 [2026-05-28 16:04] DONE feat-013 Phase 1 全链路验证与 pyte 环境修复：新增 App 级观测链路测试，112 测试全通过 → sessions/2026-05-28-1604.md

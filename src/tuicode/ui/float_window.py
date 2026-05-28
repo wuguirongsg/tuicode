@@ -180,6 +180,7 @@ class FloatWindow(Widget):
         self._saved_x = self._win_x
         self._saved_y = self._win_y
         self._refresh_border()
+        self._start_marquee()
 
     def _refresh_border(self) -> None:
         title = self._title[:32]
@@ -224,16 +225,9 @@ class FloatWindow(Widget):
 
     # ── 焦点高亮 ──────────────────────────────────────────────────────────────
 
-    def on_focus(self, event: events.Focus) -> None:
-        self._start_marquee()
-
     def on_blur(self, event: events.Blur) -> None:
         self._stop_marquee()
         self.styles.border = ("round", self._border_color)
-
-    def on_descendant_focus(self, event: events.DescendantFocus) -> None:
-        if self._marquee_timer is None:
-            self._start_marquee()
 
     def on_descendant_blur(self, event: events.DescendantBlur) -> None:
         if self._marquee_timer is None:
