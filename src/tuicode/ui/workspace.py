@@ -8,6 +8,71 @@ from textual.widgets import Static
 from tuicode.i18n import t
 from tuicode.ui.float_window import FloatWindow
 
+
+# ── 布局预设计算函数 ────────────────────────────────────────────────────────────
+# 返回 list of (target_x, target_y, target_w, target_h)，长度 >= count。
+# 所有值已满足 FloatWindow 的 MIN_WIDTH / MIN_HEIGHT 约束。
+
+def _preset_positions(preset: int, count: int, ws_w: int, ws_h: int) -> list[tuple[int, int, int, int]]:
+    """Compute absolute (x, y, w, h) for each window slot under the given preset."""
+    min_w = FloatWindow.MIN_WIDTH
+    min_h = FloatWindow.MIN_HEIGHT
+
+    def clamp(val: int, lo: int, hi: int) -> int:
+        return max(lo, min(val, hi))
+
+    positions: list[tuple[int, int, int, int]] = []
+
+    if preset == 1:
+        # 编辑模式：第一个窗口几乎全屏，其余 cascade 于右下角
+        main_w = clamp(ws_w - 2, min_w, ws_w)
+        main_h = clamp(ws_h - 2, min_h, ws_h)
+        positions.append((0, 0, main_w, main_h))
+        for i in range(1, count):
+            x = clamp(4 + (i - 1) * 4, 0, ws_w - min_w)
+            y = clamp(2 + (i - 1) * 2, 0, ws_h - min_h)
+            w = clamp(ws_w // 2, min_w, ws_w)
+            h = clamp(ws_h // 3, min_h, ws_h)
+            positions.append((x, y, w, h))
+
+    elif preset == 2:
+        # 双 Agent 对比：前两个左右平分，其余 cascade
+        half_w = clamp(ws_w // 2 - 1, min_w, ws_w)
+        main_h = clamp(ws_h - 2, min_h, ws_h)
+        if count >= 1:
+            positions.append((0, 0, half_w, main_h))
+        if count >= 2:
+            right_x = half_w + 1
+            right_w = clamp(ws_w - right_x, min_w, ws_w)
+            positions.append((right_x, 0, right_w, main_h))
+        for i in range(2, count):
+            x = clamp(4 * i, 0, ws_w - min_w)
+            y = clamp(2 * i, 0, ws_h - min_h)
+            positions.append((x, y, half_w, clamp(ws_h // 3, min_h, ws_h)))
+
+    elif preset == 3:
+        # 调试模式：上大(70%)下小(30%)，其余 cascade
+        top_h = clamp((ws_h * 7) // 10, min_h, ws_h - min_h - 1)
+        bot_h = clamp(ws_h - top_h - 1, min_h, ws_h)
+        full_w = clamp(ws_w - 2, min_w, ws_w)
+        if count >= 1:
+            positions.append((0, 0, full_w, top_h))
+        if count >= 2:
+            positions.append((0, top_h, full_w, bot_h))
+        for i in range(2, count):
+            x = clamp(4 * i, 0, ws_w - min_w)
+            y = clamp(top_h + bot_h + 2 * i, 0, ws_h - min_h)
+            positions.append((x, y, clamp(ws_w // 2, min_w, ws_w), bot_h))
+
+    # 兜底：多余的窗口 cascade
+    while len(positions) < count:
+        i = len(positions)
+        x = clamp(4 * i, 0, ws_w - min_w)
+        y = clamp(2 * i, 0, ws_h - min_h)
+        positions.append((x, y, clamp(ws_w // 2, min_w, ws_w), clamp(ws_h // 3, min_h, ws_h)))
+
+    return positions
+
 _BANNER = (
     "[bold #00d4ff]████████╗██╗   ██╗██╗  ██████╗  ██████╗ ██████╗ ███████╗[/]\n"
     "[bold #00d4ff]   ██╔══╝██║   ██║██║ ██╔════╝ ██╔═══██╗██╔══██╗██╔════╝[/]\n"
@@ -95,6 +160,11 @@ class FloatWorkspace(Widget):
             super().__init__()
             self.window = window
 
+    class PresetApplied(Message):
+        def __init__(self, preset: int) -> None:
+            super().__init__()
+            self.preset = preset
+
     _STAGGER_X = 4
     _STAGGER_Y = 2
 
@@ -145,3 +215,28 @@ class FloatWorkspace(Widget):
             self._windows.remove(message.window)
         if not self._windows:
             self.query_one("#ws-hint").display = True
+
+    def apply_preset(self, preset: int) -> None:
+        """Rearrange open windows according to layout preset 1/2/3."""
+        wins = list(self._windows)
+        if not wins:
+            return
+
+        ws_w, ws_h = self.size.width, self.size.height
+        positions = _preset_positions(preset, len(wins), ws_w, ws_h)
+
+        cumulative = 0
+        for win, (target_x, target_y, target_w, target_h) in zip(wins, positions):
+            if win._is_minimized:
+                win.restore()
+            win._win_x = target_x
+            win._win_y = target_y - cumulative
+            win._win_w = target_w
+            win._win_h = target_h
+            win._stack_y = cumulative
+            win.styles.width = target_w
+            win.styles.height = target_h
+            win.styles.offset = (target_x, target_y - cumulative)
+            cumulative += target_h
+
+        self.post_message(self.PresetApplied(preset))

@@ -62,6 +62,9 @@ class TuiCodeApp(App):
         ("alt+1", "focus_window(1)", "切换窗口 1"),
         ("alt+2", "focus_window(2)", "切换窗口 2"),
         ("alt+3", "focus_window(3)", "切换窗口 3"),
+        ("ctrl+1", "layout_preset(1)", "编辑布局"),
+        ("ctrl+2", "layout_preset(2)", "双 Agent 布局"),
+        ("ctrl+3", "layout_preset(3)", "调试布局"),
     ]
 
     CSS = """
@@ -167,3 +170,8 @@ class TuiCodeApp(App):
     async def action_new_agent_terminal(self) -> None:
         ws = self.query_one(FloatWorkspace)
         await ws.open_window(AgentTerminalWindow())
+
+    # ── 布局预设 Ctrl+1/2/3 ───────────────────────────────────────────────────
+
+    def action_layout_preset(self, n: int) -> None:
+        self.query_one(FloatWorkspace).apply_preset(n)
