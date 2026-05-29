@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-29] FIX 双击 Ctrl+C 退出：第一次发 \x03 给 PTY + 弹 1.5s toast 提示，窗口内再按一次退出 App；Ctrl+Q 保留备用
+
 [2026-05-29] FIX 命令面板快捷键修复 + 主题切换：Ctrl+Shift+P 无法在终端区分替换为 Ctrl+/ (ctrl+underscore) + F1 双绑；加入主题循环（cyberpunk→textual-dark→nord→gruvbox→textual-light）进命令面板；F1 从 PTY _KEY_MAP 移除并加入保留键集合
 
 [2026-05-29] DESIGN AI 界面设计评审（ICO + Agentic 框架）：识别 6 项改进入 backlog 待评估区——P0 智能体运行状态可见（agent_count 死信号 + 假 Tab）、P1 功能发现 + diff 体验、P2 通知 + 启动器环境感知；另记命令面板缺 feat-018 承诺的 diff/切栏命令
