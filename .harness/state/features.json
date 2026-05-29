@@ -1,8 +1,8 @@
 {
   "_readme": "只允许把 passes 从 false 改成 true。禁止删除条目或修改 description。违反视为严重错误。",
   "_project": "TuiCode",
-  "_sprint": "Phase 2A — Agent 工作流打磨",
-  "_updated": "2026-05-28T16:08",
+  "_sprint": "Phase 2B — 可见性债务 + 文件管理器",
+  "_updated": "2026-05-29T17:00",
   "features": [
     {
       "id": "feat-001",
@@ -174,6 +174,36 @@
         "feat-017"
       ],
       "passes": true
+    },
+    {
+      "id": "feat-019",
+      "description": "智能体运行状态可见 — 修复 status_bar agent_count 死信号（声明 reactive 但全代码无赋值），App 在打开/关闭/进程结束时同步计数；窗口标题与任务栏渲染「运行中/已结束/等待输入」状态",
+      "acceptance": "打开 2 个 Agent 浮窗后底栏显示「2 个 agent」，关闭一个变「1 个」；Agent 进程结束后对应窗口标题与任务栏标记「已结束」，底栏不再恒显「无 agent」",
+      "depends_on": [
+        "feat-008",
+        "feat-017"
+      ],
+      "passes": false
+    },
+    {
+      "id": "feat-020",
+      "description": "右栏 Tab 真切换 — files/git 两个标签当前有 active 高亮和 hover 但无任何点击/切换逻辑（两区纵向常驻堆叠，属误导性可供性）；让 Tab 真正切换两区显隐，active 高亮跟随真实状态",
+      "acceptance": "点 files Tab 只显示文件树，点 git Tab 只显示 Git 状态/文件列表/commit 栏；active 高亮与当前显示区一致；切换不影响 Git 自动刷新",
+      "depends_on": [
+        "feat-005",
+        "feat-012"
+      ],
+      "passes": false
+    },
+    {
+      "id": "feat-021",
+      "description": "文件树可操作化（文件管理器）— 从只读 DirectoryTree 升级为可操作：新建文件/文件夹、重命名、删除（确认弹窗）、复制绝对/相对路径。用户手动操作直接执行（不走 ToolCallRequested 审批，该约束仅针对智能体写文件）",
+      "acceptance": "文件树上可新建文件与文件夹、重命名、删除（带确认弹窗）、复制绝对路径和相对路径到剪贴板；任一写操作后文件树自动刷新；删除前必须确认",
+      "depends_on": [
+        "feat-005",
+        "feat-010"
+      ],
+      "passes": false
     }
   ]
 }
