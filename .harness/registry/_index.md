@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-29 16:30] STATUS 本次 Session 仅做状态确认，无新功能或修复；stop hook 反馈"No stderr output"属预期行为（钩子只写 stdout）
+
 [2026-05-29 12:00] DONE Phase 2A 状态确认：feat-001 至 feat-018 全部 passes=true，172 tests passed；Phase 2A Agent 工作流打磨完整闭环达成
 
 [2026-05-28 20:30] CONSTRAINT 性能卡顿非本次改动引起：PTY _on_pty_readable 每次读取都调 refresh()，Agent 高频输出时是主要压力源；跑马灯改动渲染量不变

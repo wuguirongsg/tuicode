@@ -1,4 +1,6 @@
+from textual import work
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.theme import Theme
 from textual.widget import Widget
 
@@ -34,7 +36,6 @@ class LeftColumn(Widget):
     """
 
     def compose(self) -> ComposeResult:
-        yield WindowTaskBar()
         yield FloatWorkspace()
         yield TerminalStrip()
 
@@ -58,16 +59,16 @@ class TuiCodeApp(App):
     ENABLE_COMMAND_PALETTE = False  # Ctrl+P 透传给 PTY 子进程，不打开命令面板
 
     BINDINGS = [
-        ("ctrl+q", "quit", "退出"),
-        ("ctrl+grave_accent", "focus_terminal", "聚焦终端"),
-        ("ctrl+t", "new_agent_terminal", "新建智能体终端"),
-        ("alt+1", "focus_window(1)", "切换窗口 1"),
-        ("alt+2", "focus_window(2)", "切换窗口 2"),
-        ("alt+3", "focus_window(3)", "切换窗口 3"),
-        ("ctrl+1", "layout_preset(1)", "编辑布局"),
-        ("ctrl+2", "layout_preset(2)", "双 Agent 布局"),
-        ("ctrl+3", "layout_preset(3)", "调试布局"),
-        ("ctrl+shift+p", "command_palette", "命令面板"),
+        Binding("ctrl+q", "quit", "退出", priority=True),
+        Binding("ctrl+grave_accent", "focus_terminal", "聚焦终端", priority=True),
+        Binding("ctrl+t", "new_agent_terminal", "新建智能体终端", priority=True),
+        Binding("alt+1", "focus_window(1)", "切换窗口 1", priority=True),
+        Binding("alt+2", "focus_window(2)", "切换窗口 2", priority=True),
+        Binding("alt+3", "focus_window(3)", "切换窗口 3", priority=True),
+        Binding("ctrl+1", "layout_preset(1)", "编辑布局", priority=True),
+        Binding("ctrl+2", "layout_preset(2)", "双 Agent 布局", priority=True),
+        Binding("ctrl+3", "layout_preset(3)", "调试布局", priority=True),
+        Binding("ctrl+shift+p", "command_palette", "命令面板", priority=True),
     ]
 
     CSS = """
@@ -170,13 +171,13 @@ class TuiCodeApp(App):
 
     # ── 智能体终端 ────────────────────────────────────────────────────────────
 
+    @work
     async def action_new_agent_terminal(self) -> None:
-        def _on_config(config: AgentConfig | None) -> None:
-            if config is None:
-                return
-            self.call_after_refresh(self._open_agent_window, config)
-
-        await self.push_screen(NewAgentModal(), _on_config)
+        config: AgentConfig | None = await self.push_screen(
+            NewAgentModal(), wait_for_dismiss=True
+        )
+        if config is not None:
+            await self._open_agent_window(config)
 
     async def _open_agent_window(self, config: AgentConfig) -> None:
         ws = self.query_one(FloatWorkspace)

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
+from textual.widget import Widget
 from textual.widgets import Button, Input, Label
 
 
@@ -17,9 +18,22 @@ class AgentConfig:
 
 
 _PRESETS: list[tuple[str, str, str]] = [
-    ("Claude Code", "claude --dangerously-skip-permissions", "claude"),
-    ("Aider", "aider", "aider"),
-    ("Bash", "/bin/bash", "bash"),
+    # (显示名称, 启动命令, agent_type)
+    # ── 国际主流 ──────────────────────────────────────────
+    ("Claude Code",  "claude --dangerously-skip-permissions", "claude"),
+    ("Codex",        "codex",    "codex"),
+    ("OpenCode",     "opencode", "opencode"),
+    ("OMP",          "omp",      "omp"),
+    ("Crush",        "crush",    "crush"),
+    ("Hermes",       "hermes",   "hermes"),
+    ("Aider",        "aider",    "aider"),
+    ("Gemini",       "gemini",   "gemini"),
+    ("Goose",        "goose",    "goose"),
+    # ── 国内 ─────────────────────────────────────────────
+    ("通义灵码",      "lingma",   "lingma"),
+    ("Kimi",         "kimi",     "kimi"),
+    # ── 通用备选 ─────────────────────────────────────────
+    ("Bash",         "/bin/bash", "bash"),
 ]
 
 
@@ -36,9 +50,15 @@ class NewAgentModal(ModalScreen[AgentConfig | None]):
     NewAgentModal #modal-box {
         width: 56;
         height: auto;
+        max-height: 90vh;
         border: round $accent;
         background: $surface;
         padding: 1 2;
+    }
+    NewAgentModal #preset-scroll {
+        height: auto;
+        max-height: 60vh;
+        overflow-y: auto;
     }
     NewAgentModal #modal-title {
         width: 1fr;
@@ -73,13 +93,13 @@ class NewAgentModal(ModalScreen[AgentConfig | None]):
     """
 
     def compose(self) -> ComposeResult:
-        from textual.widget import Widget
         with Widget(id="modal-box"):
             yield Label("新建 Agent 会话", id="modal-title")
-            for label, cmd, atype in _PRESETS:
-                yield Button(label, id=f"preset-{atype}", classes="preset-btn", variant="default")
+            with Widget(id="preset-scroll"):
+                for label, cmd, atype in _PRESETS:
+                    yield Button(label, id=f"preset-{atype}", classes="preset-btn", variant="default")
             yield Label("自定义命令：", id="custom-label")
-            yield Input(placeholder="e.g. codex / python script.py", id="custom-input")
+            yield Input(placeholder="e.g. opencode / python agent.py", id="custom-input")
             with Widget(id="btn-row"):
                 yield Button("启动", id="btn-ok", variant="success")
                 yield Button("取消", id="btn-cancel", variant="error")
@@ -98,7 +118,6 @@ class NewAgentModal(ModalScreen[AgentConfig | None]):
                 self.dismiss(AgentConfig(command=cmd, title="Custom", agent_type="custom"))
             return
 
-        # 预设按钮 preset-{atype}
         for label, cmd, atype in _PRESETS:
             if btn_id == f"preset-{atype}":
                 self.dismiss(AgentConfig(command=cmd, title=label, agent_type=atype))

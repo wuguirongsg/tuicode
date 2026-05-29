@@ -4,6 +4,7 @@ from textual.widgets import Static
 from textual.events import Click
 
 from tuicode.i18n import t
+from tuicode.ui.taskbar import WindowTaskBar
 
 
 class MenuBar(Widget):
@@ -17,32 +18,31 @@ class MenuBar(Widget):
     }
     MenuBar .brand {
         width: auto;
-        padding: 0 2;
+        padding: 0 1;
         color: $primary;
         text-style: bold;
     }
-    MenuBar .menu-sep {
+    MenuBar .brand:hover {
+        background: $surface;
+        color: $accent;
+    }
+    MenuBar .sep {
         width: 1;
         color: $panel-lighten-2;
     }
-    MenuBar .menu-item {
-        width: auto;
-        padding: 0 2;
-        color: $text-muted;
-    }
-    MenuBar .menu-item:hover {
-        background: $surface;
-        color: $text;
+    MenuBar WindowTaskBar {
+        background: transparent;
+        padding: 0;
+        height: 1;
     }
     """
 
     def compose(self) -> ComposeResult:
         yield Static("◈ TUICODE", classes="brand")
-        yield Static("│", classes="menu-sep")
-        for key in ("menu.file", "menu.edit", "menu.view", "menu.agents", "menu.help"):
-            yield Static(t(key), classes="menu-item", id=f"mi-{key.split('.')[1]}")
+        yield Static("│", classes="sep")
+        yield WindowTaskBar()
 
     def on_click(self, event: Click) -> None:
         node = event.widget
-        if isinstance(node, Static) and "menu-item" in (node.classes or set()):
-            self.app.notify(f"{node.render()}{t('menu.todo')}")
+        if isinstance(node, Static) and "brand" in (node.classes or set()):
+            self.app.action_command_palette()

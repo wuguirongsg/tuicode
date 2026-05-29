@@ -5,6 +5,7 @@ import collections
 import fcntl
 import os
 import re
+import shlex
 import struct
 import termios
 import asyncio
@@ -74,6 +75,16 @@ def _to_rich_color(color: str | int | None) -> str | None:
 
 
 # ── key name → PTY bytes ─────────────────────────────────────────────────────
+
+# App 级全局快捷键 — PTY 不拦截，让事件冒泡到 App BINDINGS
+_APP_RESERVED_KEYS: frozenset[str] = frozenset({
+    "ctrl+q",             # 退出 App
+    "ctrl+grave_accent",  # 聚焦终端
+    "ctrl+t",             # 新建智能体终端
+    "alt+1", "alt+2", "alt+3",    # focus_window
+    "ctrl+1", "ctrl+2", "ctrl+3", # layout_preset
+    "ctrl+shift+p",       # 命令面板
+})
 
 _KEY_MAP: dict[str, bytes] = {
     "enter":        b"\r",
@@ -206,8 +217,9 @@ class PtyTerminal(Widget):
             if fd > 2:
                 os.close(fd)
 
+        cmd_parts = shlex.split(self._shell)
         self._process = await asyncio.create_subprocess_exec(
-            self._shell,
+            cmd_parts[0], *cmd_parts[1:],
             preexec_fn=_child_setup,
             env={**os.environ, "TERM": "xterm-256color", "COLORTERM": "truecolor", "FORCE_COLOR": "3"},
         )
@@ -387,7 +399,7 @@ class PtyTerminal(Widget):
     # ── 键盘输入 ──────────────────────────────────────────────────────────────
 
     def on_key(self, event: Key) -> None:  # type: ignore[override]
-        if self._master_fd is None:
+        if self._master_fd is None or event.key in _APP_RESERVED_KEYS:
             return
         data = self._key_to_bytes(event)
         if data:
