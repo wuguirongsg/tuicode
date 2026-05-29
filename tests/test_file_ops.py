@@ -136,38 +136,55 @@ def test_target_dir_uses_parent_for_file(tmp_path: Path):
     _run(body)
 
 
-def test_copy_abs_path(tmp_path: Path):
+def _patch_clipboard(monkeypatch) -> list[bytes]:
+    """拦截系统剪贴板命令，返回捕获到的 input 列表（避免污染本机剪贴板）。"""
+    import tuicode.ui.file_tree as ftmod
+
+    captured: list[bytes] = []
+
+    def fake_run(cmd, input=None, check=False, **kw):
+        captured.append(input)
+        return None
+
+    monkeypatch.setattr(ftmod.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(ftmod.subprocess, "run", fake_run)
+    return captured
+
+
+def test_copy_abs_path(tmp_path: Path, monkeypatch):
     f = tmp_path / "a.py"
     f.touch()
+    captured = _patch_clipboard(monkeypatch)
 
     async def body():
         async with TreeApp(tmp_path).run_test() as pilot:
             await pilot.pause()
             tree = pilot.app.query_one(FileTree)
-            captured: list[str] = []
-            pilot.app.copy_to_clipboard = lambda s: captured.append(s)
+            osc: list[str] = []
+            pilot.app.copy_to_clipboard = lambda s: osc.append(s)
             tree._current_path = lambda: f
             tree.action_copy_abs_path()
-            assert captured == [str(f.resolve())]
+            # 系统剪贴板 + OSC52 都收到绝对路径
+            assert captured == [str(f.resolve()).encode("utf-8")]
+            assert osc == [str(f.resolve())]
 
     _run(body)
 
 
-def test_copy_rel_path(tmp_path: Path):
+def test_copy_rel_path(tmp_path: Path, monkeypatch):
     sub = tmp_path / "sub"
     sub.mkdir()
     f = sub / "b.py"
     f.touch()
+    captured = _patch_clipboard(monkeypatch)
 
     async def body():
         async with TreeApp(tmp_path).run_test() as pilot:
             await pilot.pause()
             tree = pilot.app.query_one(FileTree)
-            captured: list[str] = []
-            pilot.app.copy_to_clipboard = lambda s: captured.append(s)
             tree._current_path = lambda: f
             tree.action_copy_rel_path()
-            assert captured == [str(Path("sub") / "b.py")]
+            assert captured == [str(Path("sub") / "b.py").encode("utf-8")]
 
     _run(body)
 

@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from textual import events
@@ -179,7 +181,7 @@ class FileTree(DirectoryTree):
         path = self._current_path()
         if path is None:
             return
-        self.app.copy_to_clipboard(str(path.resolve()))
+        self._set_clipboard(str(path.resolve()))
         self._notify("fileop.copied_abs")
 
     def action_copy_rel_path(self) -> None:
@@ -190,5 +192,34 @@ class FileTree(DirectoryTree):
             rel = path.resolve().relative_to(Path(self.path).resolve())
         except ValueError:
             rel = path
-        self.app.copy_to_clipboard(str(rel))
+        self._set_clipboard(str(rel))
         self._notify("fileop.copied_rel")
+
+    def _set_clipboard(self, text: str) -> None:
+        """写剪贴板：本地系统命令（可靠）+ OSC 52（覆盖 SSH 远程终端）。
+
+        app.copy_to_clipboard 仅发 OSC 52，很多终端默认不接受，所以本地优先走
+        pbcopy / wl-copy / xclip / xsel。
+        """
+        # OSC 52（SSH / 支持的终端）
+        try:
+            self.app.copy_to_clipboard(text)
+        except Exception:
+            pass
+        # 本地系统剪贴板
+        if sys.platform == "darwin":
+            candidates = [["pbcopy"]]
+        else:
+            candidates = [
+                ["wl-copy"],
+                ["xclip", "-selection", "clipboard"],
+                ["xsel", "-b", "-i"],
+            ]
+        for cmd in candidates:
+            if shutil.which(cmd[0]) is None:
+                continue
+            try:
+                subprocess.run(cmd, input=text.encode("utf-8"), check=True)
+                return
+            except (OSError, subprocess.SubprocessError):
+                continue
