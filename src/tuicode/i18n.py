@@ -39,6 +39,21 @@ _STRINGS: dict[str, dict[str, str]] = {
     # ── RightPanel ────────────────────────────────────────────────────────────
     "panel.tab_files": {"zh": "files", "en": "files"},
     "panel.tab_git":   {"zh": "git", "en": "git"},
+    # ── FileTree 文件操作 ──────────────────────────────────────────────────────
+    "fileop.new_file":        {"zh": "新建文件", "en": "New file"},
+    "fileop.new_folder":      {"zh": "新建文件夹", "en": "New folder"},
+    "fileop.rename":          {"zh": "重命名", "en": "Rename"},
+    "fileop.name_hint":       {"zh": "名称", "en": "name"},
+    "fileop.btn_ok":          {"zh": "确定", "en": "OK"},
+    "fileop.btn_cancel":      {"zh": "取消", "en": "Cancel"},
+    "fileop.btn_delete":      {"zh": "删除", "en": "Delete"},
+    "fileop.confirm_delete":  {"zh": "确认删除「{name}」？此操作不可撤销", "en": "Delete \"{name}\"? This cannot be undone."},
+    "fileop.copied_abs":      {"zh": "已复制绝对路径", "en": "Copied absolute path"},
+    "fileop.copied_rel":      {"zh": "已复制相对路径", "en": "Copied relative path"},
+    "fileop.created":         {"zh": "已创建 {name}", "en": "Created {name}"},
+    "fileop.renamed":         {"zh": "已重命名为 {name}", "en": "Renamed to {name}"},
+    "fileop.deleted":         {"zh": "已删除 {name}", "en": "Deleted {name}"},
+    "fileop.failed":          {"zh": "操作失败：{err}", "en": "Operation failed: {err}"},
     # ── TerminalStrip ─────────────────────────────────────────────────────────
     "terminal.tab_bash":  {"zh": "[bash]  [+]", "en": "[bash]  [+]"},
     "terminal.drag_hint": {"zh": "─ ↕ 拖动调整终端高度 ↕ ─", "en": "─ ↕ drag to resize terminal ↕ ─"},

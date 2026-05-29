@@ -13,6 +13,7 @@ from tuicode.bus import default_bus
 from tuicode.events import FileModified, GitStatusChanged
 from tuicode.git_status import GitError, GitOps
 from tuicode.i18n import t
+from tuicode.ui.file_tree import FileTree
 from tuicode.ui.mascot import MascotPanel
 
 
@@ -222,7 +223,7 @@ class RightPanel(Widget):
             yield Static(t("panel.tab_files"), id="tab-files", classes="rp-tab rp-tab-active")
             yield Static(t("panel.tab_git"), id="tab-git", classes="rp-tab")
         with Widget(id="files-view"):
-            yield DirectoryTree(self._root, id="file-tree")
+            yield FileTree(self._root, id="file-tree")
         with Widget(id="git-view"):
             yield Static("git: checking...", id="git-status")
             yield GitFileList(id="git-files")
