@@ -240,3 +240,50 @@ class FloatWorkspace(Widget):
             cumulative += target_h
 
         self.post_message(self.PresetApplied(preset))
+
+    def reset_positions(self) -> None:
+        """把所有浮窗 cascade 重排回可见区域 —— 解决窗口被拖出屏幕看不见的问题。
+
+        尺寸超出工作区的窗口会被 clamp 到工作区内；位置统一从左上角错开排列，
+        确保每个窗口都完全落在可见区域；最小化的窗口会被还原。
+        """
+        wins = list(self._windows)
+        if not wins:
+            return
+
+        ws_w, ws_h = self.size.width, self.size.height
+        max_w = max(FloatWindow.MIN_WIDTH, ws_w - 2)
+        max_h = max(FloatWindow.MIN_HEIGHT, ws_h - 2)
+
+        next_x, next_y = 4, 1
+        cumulative = 0
+        for win in wins:
+            if win._is_minimized:
+                win.restore()
+            win._is_maximized = False
+
+            w = min(win._win_w, max_w)
+            h = min(win._win_h, max_h)
+            x = max(0, min(next_x, ws_w - w))
+            y = max(0, min(next_y, ws_h - h))
+
+            win._win_x = x
+            win._win_y = y - cumulative
+            win._win_w = w
+            win._win_h = h
+            win._stack_y = cumulative
+            win._saved_x = x
+            win._saved_y = y - cumulative
+            win._saved_w = w
+            win._saved_h = h
+            win.styles.width = w
+            win.styles.height = h
+            win.styles.offset = (x, y - cumulative)
+
+            cumulative += h
+            next_x += self._STAGGER_X
+            next_y += self._STAGGER_Y
+            if next_y > 8:
+                next_x, next_y = 4, 1
+
+        self._next_x, self._next_y = 4, 1

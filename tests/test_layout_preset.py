@@ -147,3 +147,91 @@ class TestApplyPreset:
                 w0.restore.assert_called_once()
 
         asyncio.run(run())
+
+
+# ── FloatWorkspace.reset_positions 测试 ───────────────────────────────────────
+
+
+class TestResetPositions:
+    def test_reset_no_windows_is_noop(self):
+        async def run():
+            async with _WorkspaceApp().run_test(headless=True) as pilot:
+                ws = pilot.app.query_one(FloatWorkspace)
+                ws.reset_positions()   # 不应报错
+                await pilot.pause()
+
+        asyncio.run(run())
+
+    def test_reset_pulls_offscreen_window_back_into_view(self):
+        async def run():
+            async with _WorkspaceApp().run_test(headless=True, size=(100, 40)) as pilot:
+                ws = pilot.app.query_one(FloatWorkspace)
+                w0 = _make_mock_window()
+                # 模拟被拖到屏幕外：x/y 远超工作区
+                w0._win_x = 500
+                w0._win_y = 300
+                ws._windows = [w0]
+
+                ws.reset_positions()
+                await pilot.pause()
+
+                ws_w, ws_h = ws.size.width, ws.size.height
+                # 实际屏幕坐标 = _stack_y + _win_y，必须落在工作区内
+                actual_y = w0._stack_y + w0._win_y
+                assert 0 <= w0._win_x <= ws_w - w0._win_w
+                assert 0 <= actual_y <= ws_h - w0._win_h
+
+        asyncio.run(run())
+
+    def test_reset_clamps_oversized_window(self):
+        async def run():
+            async with _WorkspaceApp().run_test(headless=True, size=(50, 20)) as pilot:
+                ws = pilot.app.query_one(FloatWorkspace)
+                w0 = _make_mock_window()
+                w0._win_w = 999   # 比工作区还大
+                w0._win_h = 999
+                ws._windows = [w0]
+
+                ws.reset_positions()
+                await pilot.pause()
+
+                ws_w, ws_h = ws.size.width, ws.size.height
+                assert w0._win_w <= ws_w
+                assert w0._win_h <= ws_h
+                assert w0._win_w >= FloatWindow.MIN_WIDTH
+                assert w0._win_h >= FloatWindow.MIN_HEIGHT
+
+        asyncio.run(run())
+
+    def test_reset_restores_minimized_and_clears_maximized(self):
+        async def run():
+            async with _WorkspaceApp().run_test(headless=True) as pilot:
+                ws = pilot.app.query_one(FloatWorkspace)
+                w0 = _make_mock_window()
+                w0._is_minimized = True
+                w0._is_maximized = True
+                ws._windows = [w0]
+
+                ws.reset_positions()
+                await pilot.pause()
+
+                w0.restore.assert_called_once()
+                assert w0._is_maximized is False
+
+        asyncio.run(run())
+
+    def test_reset_cascades_multiple_windows_without_overlap_in_y(self):
+        async def run():
+            async with _WorkspaceApp().run_test(headless=True, size=(120, 50)) as pilot:
+                ws = pilot.app.query_one(FloatWorkspace)
+                w0 = _make_mock_window()
+                w1 = _make_mock_window()
+                ws._windows = [w0, w1]
+
+                ws.reset_positions()
+                await pilot.pause()
+
+                # 两个窗口都落在可见区，且 cascade 错开（第二个 x 更大）
+                assert w1._win_x > w0._win_x
+
+        asyncio.run(run())

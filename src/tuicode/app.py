@@ -194,6 +194,11 @@ class TuiCodeApp(App):
     def action_layout_preset(self, n: int) -> None:
         self.query_one(FloatWorkspace).apply_preset(n)
 
+    # ── 重置窗口位置 ──────────────────────────────────────────────────────────
+
+    def action_reset_windows(self) -> None:
+        self.query_one(FloatWorkspace).reset_positions()
+
     # ── 命令面板 Ctrl+Shift+P ─────────────────────────────────────────────────
 
     def action_command_palette(self) -> None:
@@ -225,6 +230,12 @@ class TuiCodeApp(App):
                 description="上大下小（Ctrl+3）",
                 callback=lambda: self.action_layout_preset(3),
                 keywords=["layout", "debug"],
+            ),
+            PaletteCommand(
+                name="重置窗口位置",
+                description="把所有浮窗拉回可见区域（窗口跑到屏幕外时用）",
+                callback=self.action_reset_windows,
+                keywords=["reset", "window", "position", "重置", "窗口", "复位"],
             ),
             PaletteCommand(
                 name="聚焦底部终端",
