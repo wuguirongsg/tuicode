@@ -83,7 +83,8 @@ _APP_RESERVED_KEYS: frozenset[str] = frozenset({
     "ctrl+t",             # 新建智能体终端
     "alt+1", "alt+2", "alt+3",    # focus_window
     "ctrl+1", "ctrl+2", "ctrl+3", # layout_preset
-    "ctrl+shift+p",       # 命令面板
+    "ctrl+underscore",    # 命令面板 Ctrl+/
+    "f1",                 # 命令面板备用
 })
 
 _KEY_MAP: dict[str, bytes] = {
@@ -100,7 +101,6 @@ _KEY_MAP: dict[str, bytes] = {
     "end":          b"\x1b[F",
     "pageup":       b"\x1b[5~",
     "pagedown":     b"\x1b[6~",
-    "f1":           b"\x1bOP",
     "f2":           b"\x1bOQ",
     "f3":           b"\x1bOR",
     "f4":           b"\x1bOS",

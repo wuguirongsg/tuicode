@@ -68,7 +68,8 @@ class TuiCodeApp(App):
         Binding("ctrl+1", "layout_preset(1)", "编辑布局", priority=True),
         Binding("ctrl+2", "layout_preset(2)", "双 Agent 布局", priority=True),
         Binding("ctrl+3", "layout_preset(3)", "调试布局", priority=True),
-        Binding("ctrl+shift+p", "command_palette", "命令面板", priority=True),
+        Binding("ctrl+underscore", "command_palette", "命令面板", priority=True),
+        Binding("f1", "command_palette", "命令面板", priority=True),
     ]
 
     CSS = """
@@ -76,6 +77,8 @@ class TuiCodeApp(App):
         background: $background;
     }
     """
+
+    _THEME_CYCLE = ["cyberpunk", "textual-dark", "nord", "gruvbox", "textual-light"]
 
     def on_mount(self) -> None:
         self.register_theme(Theme(
@@ -199,7 +202,16 @@ class TuiCodeApp(App):
     def action_reset_windows(self) -> None:
         self.query_one(FloatWorkspace).reset_positions()
 
-    # ── 命令面板 Ctrl+Shift+P ─────────────────────────────────────────────────
+    # ── 主题切换 ──────────────────────────────────────────────────────────────
+
+    def action_toggle_theme(self) -> None:
+        try:
+            idx = self._THEME_CYCLE.index(self.theme)
+        except ValueError:
+            idx = -1
+        self.theme = self._THEME_CYCLE[(idx + 1) % len(self._THEME_CYCLE)]
+
+    # ── 命令面板 Ctrl+/ / F1 ──────────────────────────────────────────────────
 
     def action_command_palette(self) -> None:
         commands = self._build_palette_commands()
@@ -207,6 +219,12 @@ class TuiCodeApp(App):
 
     def _build_palette_commands(self) -> list[PaletteCommand]:
         return [
+            PaletteCommand(
+                name="切换主题",
+                description=f"当前：{self.theme}，循环切换配色方案",
+                callback=self.action_toggle_theme,
+                keywords=["theme", "color", "主题", "配色", "dark", "light"],
+            ),
             PaletteCommand(
                 name="新建 Agent 会话",
                 description="打开 Agent 启动器（Ctrl+T）",
