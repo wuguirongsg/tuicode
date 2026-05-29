@@ -10,9 +10,11 @@ from textual.widgets import Static
 
 from tuicode.app import TuiCodeApp
 from tuicode.events import GitStatusChanged
+from tuicode.ui.agent_terminal_window import AgentTerminalWindow
 from tuicode.ui.diff_preview_window import DiffPreviewWindow
 from tuicode.ui.editor_window import EditorWindow
 from tuicode.ui.right_panel import GitFileList, RightPanel
+from tuicode.ui.status_bar import StatusBar
 from tuicode.ui.workspace import FloatWorkspace
 
 
@@ -80,5 +82,34 @@ def test_app_opens_read_only_diff_preview_from_git_panel(tmp_path: Path, monkeyp
             assert win._path == target
             assert "-old = True" in win._diff
             assert "+new = True" in win._diff
+
+    asyncio.run(run())
+
+
+def test_app_agent_count_tracks_open_agent_windows(tmp_path: Path, monkeypatch):
+    """feat-019: 底栏 agent_count 随 Agent 浮窗开关增减，不再恒为 0。"""
+    monkeypatch.chdir(tmp_path)
+
+    async def run():
+        app = TuiCodeApp()
+        async with app.run_test(size=(140, 50), headless=True) as pilot:
+            await pilot.pause()
+            status = app.query_one(StatusBar)
+            assert status.agent_count == 0
+
+            ws = app.query_one(FloatWorkspace)
+            win1 = AgentTerminalWindow(title="A")
+            await ws.open_window(win1)
+            await pilot.pause()
+            assert status.agent_count == 1
+
+            win2 = AgentTerminalWindow(title="B")
+            await ws.open_window(win2)
+            await pilot.pause()
+            assert status.agent_count == 2
+
+            win1._do_close()
+            await pilot.pause()
+            assert status.agent_count == 1
 
     asyncio.run(run())

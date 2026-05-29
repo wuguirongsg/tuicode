@@ -96,6 +96,7 @@ class TuiCodeApp(App):
             dark=True,
         ))
         self.theme = "cyberpunk"
+        self._agent_windows: set[int] = set()  # 打开的 Agent 浮窗 id 集合（驱动底栏计数）
         self._workspace_state = WorkspaceStateAggregator()
         self._workspace_watcher = WorkspaceWatcher(".")
         self._git_status_poller = GitStatusPoller(".")
@@ -125,15 +126,30 @@ class TuiCodeApp(App):
         self, msg: FloatWorkspace.WindowOpened
     ) -> None:
         await self.query_one(WindowTaskBar).add_window(msg.window)
+        if isinstance(msg.window, AgentTerminalWindow):
+            self._agent_windows.add(id(msg.window))
+            self._refresh_agent_count()
         self.query_one(RightPanel).set_mascot_state("opening", auto_reset=2.0)
 
     async def on_float_window_closed(self, msg: FloatWindow.Closed) -> None:
         await self.query_one(WindowTaskBar).remove_window(msg.window)
+        if id(msg.window) in self._agent_windows:
+            self._agent_windows.discard(id(msg.window))
+            self._refresh_agent_count()
 
     def on_float_window_minimize_toggled(
         self, msg: FloatWindow.MinimizeToggled
     ) -> None:
         self.query_one(WindowTaskBar).update_window(msg.window)
+
+    def on_agent_terminal_window_status_changed(
+        self, msg: AgentTerminalWindow.StatusChanged
+    ) -> None:
+        # 进程运行/结束切换：刷新任务栏按钮标题（▶/■ 标记跟随）
+        self.query_one(WindowTaskBar).update_window(msg.window)
+
+    def _refresh_agent_count(self) -> None:
+        self.query_one(StatusBar).agent_count = len(self._agent_windows)
 
     # ── Alt+N 快切 ────────────────────────────────────────────────────────────
 

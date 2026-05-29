@@ -158,3 +158,34 @@ def test_agent_terminal_close():
             assert len(ws._windows) == 0
 
     asyncio.run(run())
+
+
+# ── feat-019 运行状态可见 ─────────────────────────────────────────────────────
+
+def test_agent_title_starts_with_running_marker():
+    """新建 Agent 浮窗标题以 ▶（运行中）开头。"""
+    win = AgentTerminalWindow(title="Claude")
+    assert win._title.startswith("▶")
+    assert "Claude" in win._title
+
+
+def test_agent_status_flips_to_ended_when_process_dies():
+    """PTY 子进程结束后，标题翻成 ■ 并广播 StatusChanged。"""
+    async def run():
+        app = _AgentApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            win = await app.open_agent(title="Claude")
+            await pilot.pause(0.4)
+            win._check_status()  # 标记已见过存活
+            assert win._status_running is True
+            assert win._title.startswith("▶")
+
+            pty = win.query_one(PtyTerminal)
+            pty._process.kill()  # 交互式 bash 会忽略 SIGTERM，用 SIGKILL
+            await pty._process.wait()  # 等待回收，returncode 落定
+
+            win._check_status()
+            assert win._status_running is False
+            assert win._title.startswith("■")
+
+    asyncio.run(run())
