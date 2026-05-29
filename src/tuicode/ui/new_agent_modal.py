@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from textual.app import ComposeResult
+from textual.containers import VerticalScroll
 from textual.screen import ModalScreen
 from textual.widget import Widget
 from textual.widgets import Button, Input, Label
@@ -49,15 +50,13 @@ class NewAgentModal(ModalScreen[AgentConfig | None]):
     }
     NewAgentModal #modal-box {
         width: 56;
-        height: auto;
-        max-height: 90vh;
+        height: 90vh;
         border: round $accent;
         background: $surface;
         padding: 1 2;
     }
     NewAgentModal #preset-scroll {
-        height: auto;
-        max-height: 60vh;
+        height: 1fr;
         overflow-y: auto;
     }
     NewAgentModal #modal-title {
@@ -95,7 +94,7 @@ class NewAgentModal(ModalScreen[AgentConfig | None]):
     def compose(self) -> ComposeResult:
         with Widget(id="modal-box"):
             yield Label("新建 Agent 会话", id="modal-title")
-            with Widget(id="preset-scroll"):
+            with VerticalScroll(id="preset-scroll"):
                 for label, cmd, atype in _PRESETS:
                     yield Button(label, id=f"preset-{atype}", classes="preset-btn", variant="default")
             yield Label("自定义命令：", id="custom-label")

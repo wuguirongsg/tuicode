@@ -206,7 +206,6 @@ class PtyTerminal(Widget):
         self._set_pty_size(self._cols, self._rows)
 
         slave_name = os.ttyname(slave_fd)
-        os.close(slave_fd)
 
         def _child_setup() -> None:
             os.setsid()
@@ -223,6 +222,11 @@ class PtyTerminal(Widget):
             preexec_fn=_child_setup,
             env={**os.environ, "TERM": "xterm-256color", "COLORTERM": "truecolor", "FORCE_COLOR": "3"},
         )
+        # fork 已完成，父进程不再需要 slave 端；子进程已在 _child_setup 里重新打开它
+        os.close(slave_fd)
+
+        # 非阻塞模式：让 _on_pty_readable 能循环读直到 EAGAIN 而不会挂死
+        fcntl.fcntl(master_fd, fcntl.F_SETFL, os.O_NONBLOCK)
 
         loop = asyncio.get_event_loop()
         loop.add_reader(master_fd, self._on_pty_readable)
@@ -244,8 +248,19 @@ class PtyTerminal(Widget):
         if self._master_fd is None:
             return
         try:
-            data = os.read(self._master_fd, 4096)
-            if data and self._pyte_stream is not None:
+            # 循环读直到 EAGAIN，把 PTY 缓冲区一次性清空。
+            # 这样可以避免子进程因 PTY 缓冲区满而阻塞写操作（卡住的根本原因之一）。
+            buf = bytearray()
+            while True:
+                try:
+                    chunk = os.read(self._master_fd, 65536)
+                    if not chunk:
+                        break
+                    buf += chunk
+                except BlockingIOError:
+                    break
+            if buf and self._pyte_stream is not None:
+                data = bytes(buf)
                 # 扫描鼠标模式 + bracketed paste 模式开关（pyte 不跟踪私有模式）
                 for m in _RE_MOUSE_MODE.finditer(data):
                     mode = int(m.group(1))
@@ -257,7 +272,6 @@ class PtyTerminal(Widget):
                 for m in _RE_BPASTE_MODE.finditer(data):
                     self._bracketed_paste = m.group(1) == b"h"
                 self._pyte_stream.feed(data)
-                # 有新输出时自动滚到底部
                 if self._scroll_offset > 0:
                     self._scroll_offset = 0
                     self._update_scroll_indicator()
