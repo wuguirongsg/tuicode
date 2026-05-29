@@ -117,3 +117,5 @@
 [2026-05-26 19:00] DONE feat-003 浮窗管理器（FloatWindow 基类 + FloatWorkspace），16 测试通过，视觉效果待人工确认 → sessions/2026-05-26-1900.md
 
 [2026-05-26 18:00] DECISION AgentDeck 项目 harness 初始化完成，确认 Phase 1 包含 12 条 feat → decisions/init.md
+
+[2026-05-29] DONE feat-015/016/017/018 Phase 2A 全部完成：Git stage/commit 闭环、布局预设 Ctrl+1/2/3、Agent 启动器 Modal、命令面板 Ctrl+Shift+P，172 tests passed → sessions/2026-05-29-build.md
