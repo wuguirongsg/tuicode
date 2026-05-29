@@ -200,3 +200,88 @@ def test_action_delete_opens_confirm_modal(tmp_path: Path):
             assert isinstance(pilot.app.screen, ConfirmDeleteModal)
 
     _run(body)
+
+
+# ── 单击只高亮、双击才打开 ────────────────────────────────────────────────────
+
+
+class CaptureApp(App):
+    def __init__(self, root: Path) -> None:
+        super().__init__()
+        self._root = root
+        self.opened: list[Path] = []
+
+    def compose(self) -> ComposeResult:
+        yield FileTree(self._root, id="file-tree")
+
+    def on_directory_tree_file_selected(self, event) -> None:
+        self.opened.append(event.path)
+
+
+def _file_line(tree: FileTree, name: str) -> int | None:
+    for ln in range(tree.last_line + 1):
+        node = tree.get_node_at_line(ln)
+        if node is not None and node.data is not None:
+            if Path(node.data.path).name == name:
+                return ln
+    return None
+
+
+def test_single_click_file_highlights_without_opening(tmp_path: Path):
+    (tmp_path / "a.py").write_text("x = 1\n", encoding="utf-8")
+
+    async def body():
+        async with CaptureApp(tmp_path).run_test(size=(50, 20)) as pilot:
+            await pilot.pause()
+            tree = pilot.app.query_one(FileTree)
+            tree.root.expand()
+            await pilot.pause()
+            line = _file_line(tree, "a.py")
+            assert line is not None
+            await pilot.click(tree, offset=(4, line))
+            await pilot.pause()
+            assert pilot.app.opened == []  # 单击不打开
+            assert tree.cursor_line == line  # 但光标移到该文件（已高亮）
+
+    _run(body)
+
+
+def test_double_click_file_opens(tmp_path: Path):
+    (tmp_path / "a.py").write_text("x = 1\n", encoding="utf-8")
+
+    async def body():
+        async with CaptureApp(tmp_path).run_test(size=(50, 20)) as pilot:
+            await pilot.pause()
+            tree = pilot.app.query_one(FileTree)
+            tree.root.expand()
+            await pilot.pause()
+            line = _file_line(tree, "a.py")
+            assert line is not None
+            await pilot.click(tree, offset=(4, line), times=2)
+            await pilot.pause()
+            assert len(pilot.app.opened) == 1
+            assert pilot.app.opened[0].name == "a.py"
+
+    _run(body)
+
+
+def test_enter_on_file_opens(tmp_path: Path):
+    """键盘回车仍打开文件（不受单击抑制影响）。"""
+    (tmp_path / "a.py").write_text("x = 1\n", encoding="utf-8")
+
+    async def body():
+        async with CaptureApp(tmp_path).run_test(size=(50, 20)) as pilot:
+            await pilot.pause()
+            tree = pilot.app.query_one(FileTree)
+            tree.root.expand()
+            await pilot.pause()
+            line = _file_line(tree, "a.py")
+            tree.focus()
+            tree.cursor_line = line
+            await pilot.pause()
+            await pilot.press("enter")
+            await pilot.pause()
+            assert len(pilot.app.opened) == 1
+            assert pilot.app.opened[0].name == "a.py"
+
+    _run(body)

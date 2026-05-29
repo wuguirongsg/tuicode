@@ -8,6 +8,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+from textual import events
 from textual.widgets import DirectoryTree
 
 from tuicode.bus import default_bus
@@ -30,6 +31,23 @@ class FileTree(DirectoryTree):
         ("y", "copy_abs_path", "复制绝对路径"),
         ("Y", "copy_rel_path", "复制相对路径"),
     ]
+
+    # ── 单击只高亮、双击/回车才打开（避免单击即打开抢走焦点，妨碍 r/d 操作）──
+    #
+    # Tree._on_click 在私有派发路径里固定执行（子类覆盖不进派发），无法直接拦。
+    # 改在公开 on_click 记录点击次数（附加调用，先于 FileSelected 触发），
+    # 再在 FileTree 自己的 FileSelected 处理器里：单击吞掉、双击/回车放行冒泡到 RightPanel。
+
+    _pending_click_chain: int | None = None
+
+    def on_click(self, event: events.Click) -> None:
+        self._pending_click_chain = event.chain
+
+    def on_directory_tree_file_selected(self, event: DirectoryTree.FileSelected) -> None:
+        chain = self._pending_click_chain
+        self._pending_click_chain = None
+        if chain is not None and chain < 2:
+            event.stop()  # 单击仅高亮，不打开（不冒泡到 RightPanel）
 
     # ── 当前选中路径 ──────────────────────────────────────────────────────────
 
