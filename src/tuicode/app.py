@@ -8,6 +8,7 @@ from tuicode.events import FileModified
 from tuicode.git_diff import GitDiffService
 from tuicode.git_status import GitStatusPoller
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
+from tuicode.ui.command_palette_modal import CommandPaletteModal, PaletteCommand
 from tuicode.ui.new_agent_modal import AgentConfig, NewAgentModal
 from tuicode.ui.diff_preview_window import DiffPreviewWindow
 from tuicode.ui.editor_window import EditorWindow
@@ -66,6 +67,7 @@ class TuiCodeApp(App):
         ("ctrl+1", "layout_preset(1)", "编辑布局"),
         ("ctrl+2", "layout_preset(2)", "双 Agent 布局"),
         ("ctrl+3", "layout_preset(3)", "调试布局"),
+        ("ctrl+shift+p", "command_palette", "命令面板"),
     ]
 
     CSS = """
@@ -190,3 +192,81 @@ class TuiCodeApp(App):
 
     def action_layout_preset(self, n: int) -> None:
         self.query_one(FloatWorkspace).apply_preset(n)
+
+    # ── 命令面板 Ctrl+Shift+P ─────────────────────────────────────────────────
+
+    def action_command_palette(self) -> None:
+        commands = self._build_palette_commands()
+        self.push_screen(CommandPaletteModal(commands))
+
+    def _build_palette_commands(self) -> list[PaletteCommand]:
+        return [
+            PaletteCommand(
+                name="新建 Agent 会话",
+                description="打开 Agent 启动器（Ctrl+T）",
+                callback=lambda: self.call_after_refresh(self.action_new_agent_terminal),
+                keywords=["agent", "claude", "terminal", "bash"],
+            ),
+            PaletteCommand(
+                name="布局：编辑模式",
+                description="主窗口最大化（Ctrl+1）",
+                callback=lambda: self.action_layout_preset(1),
+                keywords=["layout", "preset", "edit"],
+            ),
+            PaletteCommand(
+                name="布局：双 Agent 对比",
+                description="左右分屏（Ctrl+2）",
+                callback=lambda: self.action_layout_preset(2),
+                keywords=["layout", "dual", "split", "compare"],
+            ),
+            PaletteCommand(
+                name="布局：调试模式",
+                description="上大下小（Ctrl+3）",
+                callback=lambda: self.action_layout_preset(3),
+                keywords=["layout", "debug"],
+            ),
+            PaletteCommand(
+                name="聚焦底部终端",
+                description="切换焦点到 bash 终端（Ctrl+`）",
+                callback=self.action_focus_terminal,
+                keywords=["terminal", "bash", "focus"],
+            ),
+            PaletteCommand(
+                name="切换窗口 1",
+                description="置顶第 1 个浮窗（Alt+1）",
+                callback=lambda: self.action_focus_window(1),
+                keywords=["window", "focus"],
+            ),
+            PaletteCommand(
+                name="切换窗口 2",
+                description="置顶第 2 个浮窗（Alt+2）",
+                callback=lambda: self.action_focus_window(2),
+                keywords=["window", "focus"],
+            ),
+            PaletteCommand(
+                name="切换窗口 3",
+                description="置顶第 3 个浮窗（Alt+3）",
+                callback=lambda: self.action_focus_window(3),
+                keywords=["window", "focus"],
+            ),
+            PaletteCommand(
+                name="Git commit（聚焦输入框）",
+                description="将焦点移到右栏 commit 输入框",
+                callback=self._focus_commit_input,
+                keywords=["git", "commit", "stage"],
+            ),
+            PaletteCommand(
+                name="退出",
+                description="退出 TuiCode（Ctrl+Q）",
+                callback=self.action_quit,
+                keywords=["quit", "exit"],
+            ),
+        ]
+
+    def _focus_commit_input(self) -> None:
+        try:
+            from tuicode.ui.right_panel import CommitBar
+            from textual.widgets import Input
+            self.query_one(CommitBar).query_one(Input).focus()
+        except Exception:
+            pass
