@@ -185,10 +185,16 @@ class RightPanel(Widget):
         color: $text;
     }
     RightPanel .rp-tab-active {
-        width: auto;
-        padding: 0 2;
         color: $accent;
         text-style: bold;
+    }
+    RightPanel #files-view {
+        height: 1fr;
+        layout: vertical;
+    }
+    RightPanel #git-view {
+        height: 1fr;
+        layout: vertical;
     }
     RightPanel DirectoryTree {
         height: 1fr;
@@ -213,20 +219,43 @@ class RightPanel(Widget):
     def compose(self) -> ComposeResult:
         yield MascotPanel(id="rp-mascot")
         with Widget(id="rp-tabs"):
-            yield Static(t("panel.tab_files"), classes="rp-tab-active")
-            yield Static(t("panel.tab_git"), classes="rp-tab")
-        yield DirectoryTree(self._root, id="file-tree")
-        yield Static("git: checking...", id="git-status")
-        yield GitFileList(id="git-files")
-        yield CommitBar(id="commit-bar")
+            yield Static(t("panel.tab_files"), id="tab-files", classes="rp-tab rp-tab-active")
+            yield Static(t("panel.tab_git"), id="tab-git", classes="rp-tab")
+        with Widget(id="files-view"):
+            yield DirectoryTree(self._root, id="file-tree")
+        with Widget(id="git-view"):
+            yield Static("git: checking...", id="git-status")
+            yield GitFileList(id="git-files")
+            yield CommitBar(id="commit-bar")
 
     def on_mount(self) -> None:
+        # 默认显示文件树，Git 视图隐藏（feat-020：Tab 真切换）
+        self.query_one("#git-view").display = False
         self._unsubscribe_file_modified = default_bus.subscribe(
             FileModified, self._on_file_modified
         )
         self._unsubscribe_git_status = default_bus.subscribe(
             GitStatusChanged, self._on_git_status_changed
         )
+
+    def on_click(self, event: events.Click) -> None:
+        # Tab 标签点击切换；其他子组件的点击有各自的 on_click 已 stop，不会误触
+        target_id = getattr(event.widget, "id", None)
+        if target_id == "tab-files":
+            self._show_tab("files")
+            event.stop()
+        elif target_id == "tab-git":
+            self._show_tab("git")
+            event.stop()
+
+    def _show_tab(self, which: str) -> None:
+        is_files = which == "files"
+        self.query_one("#files-view").display = is_files
+        self.query_one("#git-view").display = not is_files
+        files_tab = self.query_one("#tab-files", Static)
+        git_tab = self.query_one("#tab-git", Static)
+        files_tab.set_class(is_files, "rp-tab-active")
+        git_tab.set_class(not is_files, "rp-tab-active")
 
     def on_unmount(self) -> None:
         if self._unsubscribe_file_modified is not None:

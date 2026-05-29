@@ -72,6 +72,54 @@ class TestRightPanelCompose:
         asyncio.run(run())
 
 
+# ── feat-020: 右栏 Tab 真切换 ─────────────────────────────────────────────────
+
+
+class TestRightPanelTabSwitch:
+    def test_default_shows_files_hides_git(self, tmp_path: Path):
+        """默认显示文件树，隐藏 Git 视图，files Tab 高亮。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                await pilot.pause()
+                app = pilot.app
+                assert app.query_one("#files-view").display is True
+                assert app.query_one("#git-view").display is False
+                assert app.query_one("#tab-files", Static).has_class("rp-tab-active")
+                assert not app.query_one("#tab-git", Static).has_class("rp-tab-active")
+
+        asyncio.run(run())
+
+    def test_switch_to_git_tab(self, tmp_path: Path):
+        """切到 git Tab：显示 Git 视图、隐藏文件树，高亮跟随。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                await pilot.pause()
+                app = pilot.app
+                app.query_one(RightPanel)._show_tab("git")
+                await pilot.pause()
+                assert app.query_one("#files-view").display is False
+                assert app.query_one("#git-view").display is True
+                assert app.query_one("#tab-git", Static).has_class("rp-tab-active")
+                assert not app.query_one("#tab-files", Static).has_class("rp-tab-active")
+
+        asyncio.run(run())
+
+    def test_switch_back_to_files_tab(self, tmp_path: Path):
+        """git → files 切回，状态正确还原。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                await pilot.pause()
+                panel = pilot.app.query_one(RightPanel)
+                panel._show_tab("git")
+                panel._show_tab("files")
+                await pilot.pause()
+                assert pilot.app.query_one("#files-view").display is True
+                assert pilot.app.query_one("#git-view").display is False
+                assert pilot.app.query_one("#tab-files", Static).has_class("rp-tab-active")
+
+        asyncio.run(run())
+
+
 # ── 测试：FileRequested 消息 ──────────────────────────────────────────────────
 
 
