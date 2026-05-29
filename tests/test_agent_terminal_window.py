@@ -31,13 +31,13 @@ class _AgentApp(App):
 def test_agent_terminal_window_default_attrs():
     win = AgentTerminalWindow()
     assert win._command == "/bin/bash"
-    assert win._title == "Terminal"
+    assert "Terminal" in win._title  # _title 包含 session_id 后缀
 
 
 def test_agent_terminal_window_custom_attrs():
     win = AgentTerminalWindow(command="/bin/sh", title="Claude")
     assert win._command == "/bin/sh"
-    assert win._title == "Claude"
+    assert "Claude" in win._title
 
 
 def test_agent_terminal_window_inherits_float_window():

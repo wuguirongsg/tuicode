@@ -8,6 +8,7 @@ from tuicode.events import FileModified
 from tuicode.git_diff import GitDiffService
 from tuicode.git_status import GitStatusPoller
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
+from tuicode.ui.new_agent_modal import AgentConfig, NewAgentModal
 from tuicode.ui.diff_preview_window import DiffPreviewWindow
 from tuicode.ui.editor_window import EditorWindow
 from tuicode.ui.float_window import FloatWindow
@@ -168,8 +169,22 @@ class TuiCodeApp(App):
     # ── 智能体终端 ────────────────────────────────────────────────────────────
 
     async def action_new_agent_terminal(self) -> None:
+        def _on_config(config: AgentConfig | None) -> None:
+            if config is None:
+                return
+            self.call_after_refresh(self._open_agent_window, config)
+
+        await self.push_screen(NewAgentModal(), _on_config)
+
+    async def _open_agent_window(self, config: AgentConfig) -> None:
         ws = self.query_one(FloatWorkspace)
-        await ws.open_window(AgentTerminalWindow())
+        await ws.open_window(
+            AgentTerminalWindow(
+                command=config.command,
+                title=config.title,
+                agent_type=config.agent_type,
+            )
+        )
 
     # ── 布局预设 Ctrl+1/2/3 ───────────────────────────────────────────────────
 
