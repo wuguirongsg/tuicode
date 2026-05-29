@@ -1,3 +1,5 @@
+import time
+
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -99,6 +101,7 @@ class TuiCodeApp(App):
         ))
         self.theme = "cyberpunk"
         self._agent_windows: set[int] = set()  # 打开的 Agent 浮窗 id 集合（驱动底栏计数）
+        self._last_ctrl_c: float = 0.0  # 全局双击 Ctrl+C 退出计时
         self._workspace_state = WorkspaceStateAggregator()
         self._workspace_watcher = WorkspaceWatcher(".")
         self._git_status_poller = GitStatusPoller(".")
@@ -160,6 +163,22 @@ class TuiCodeApp(App):
         is_filetree = isinstance(event.widget, FileTree)
         hint = t("status.filetree_hint") if is_filetree else None
         self.query_one(StatusBar).set_shortcuts(hint)
+
+    # ── 全局双击 Ctrl+C 退出 ──────────────────────────────────────────────────
+
+    def on_key(self, event) -> None:
+        # 焦点不在 PTY（或被消费）时，Ctrl+C 冒泡到这里参与全局双击退出。
+        # 焦点在 PTY 时，PtyTerminal 已处理并 event.stop()，直接调用本逻辑、不会重复计数。
+        if event.key == "ctrl+c":
+            self._ctrl_c_pressed()
+
+    def _ctrl_c_pressed(self) -> None:
+        now = time.monotonic()
+        if now - self._last_ctrl_c < 1.5:
+            self.exit()
+            return
+        self._last_ctrl_c = now
+        self.notify("再按一次 Ctrl+C 退出", timeout=1.5, severity="warning")
 
     # ── Alt+N 快切 ────────────────────────────────────────────────────────────
 

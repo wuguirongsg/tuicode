@@ -108,6 +108,46 @@ def test_status_bar_shows_filetree_hint_on_focus(tmp_path: Path, monkeypatch):
     asyncio.run(run())
 
 
+def test_double_ctrl_c_exits_globally(tmp_path: Path, monkeypatch):
+    """第一次 Ctrl+C 只提示，1.5s 内第二次退出 App。"""
+    monkeypatch.chdir(tmp_path)
+
+    async def run():
+        app = TuiCodeApp()
+        async with app.run_test(size=(140, 50), headless=True) as pilot:
+            await pilot.pause()
+            exited: list[bool] = []
+            monkeypatch.setattr(app, "exit", lambda *a, **k: exited.append(True))
+
+            app._ctrl_c_pressed()
+            assert exited == []  # 第一次只提示，不退出
+
+            app._ctrl_c_pressed()  # 立即第二次
+            assert exited == [True]
+
+    asyncio.run(run())
+
+
+def test_ctrl_c_resets_after_timeout(tmp_path: Path, monkeypatch):
+    """两次 Ctrl+C 间隔超过 1.5s 不退出，只重新提示。"""
+    import time
+    monkeypatch.chdir(tmp_path)
+
+    async def run():
+        app = TuiCodeApp()
+        async with app.run_test(size=(140, 50), headless=True) as pilot:
+            await pilot.pause()
+            exited: list[bool] = []
+            monkeypatch.setattr(app, "exit", lambda *a, **k: exited.append(True))
+
+            app._ctrl_c_pressed()
+            app._last_ctrl_c = time.monotonic() - 2.0  # 模拟超时
+            app._ctrl_c_pressed()
+            assert exited == []  # 超时后第二次仍只提示
+
+    asyncio.run(run())
+
+
 def test_app_agent_count_tracks_open_agent_windows(tmp_path: Path, monkeypatch):
     """feat-019: 底栏 agent_count 随 Agent 浮窗开关增减，不再恒为 0。"""
     monkeypatch.chdir(tmp_path)

@@ -9,7 +9,6 @@ import shlex
 import struct
 import termios
 import asyncio
-import time
 from typing import TYPE_CHECKING
 
 import pyte
@@ -193,7 +192,6 @@ class PtyTerminal(Widget):
         self._app_mouse = False      # 子进程是否启用了鼠标跟踪
         self._app_mouse_sgr = False  # 子进程是否使用 SGR 鼠标编码
         self._bracketed_paste = False  # 子进程是否启用了 bracketed paste mode
-        self._last_ctrl_c: float = 0.0  # 双击 Ctrl+C 退出计时
 
     # ── 生命周期 ───────────────────────────────────────────────────────────────
 
@@ -418,12 +416,8 @@ class PtyTerminal(Widget):
         if self._master_fd is None or event.key in _APP_RESERVED_KEYS:
             return
         if event.key == "ctrl+c":
-            now = time.monotonic()
-            if now - self._last_ctrl_c < 1.5:
-                self.app.exit()
-                return
-            self._last_ctrl_c = now
-            self.app.notify("再按一次 Ctrl+C 退出", timeout=1.5, severity="warning")
+            # 计数交给 App（全局双击退出）；\x03 仍照常透传给子进程中断 agent
+            self.app._ctrl_c_pressed()
         data = self._key_to_bytes(event)
         if data:
             event.stop()
