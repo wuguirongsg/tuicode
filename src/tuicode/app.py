@@ -9,11 +9,13 @@ from tuicode.bus import default_bus
 from tuicode.events import FileModified
 from tuicode.git_diff import GitDiffService
 from tuicode.git_status import GitStatusPoller
+from tuicode.i18n import t
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
 from tuicode.ui.command_palette_modal import CommandPaletteModal, PaletteCommand
 from tuicode.ui.new_agent_modal import AgentConfig, NewAgentModal
 from tuicode.ui.diff_preview_window import DiffPreviewWindow
 from tuicode.ui.editor_window import EditorWindow
+from tuicode.ui.file_tree import FileTree
 from tuicode.ui.float_window import FloatWindow
 from tuicode.ui.menu_bar import MenuBar
 from tuicode.ui.right_panel import RightPanel
@@ -150,6 +152,14 @@ class TuiCodeApp(App):
 
     def _refresh_agent_count(self) -> None:
         self.query_one(StatusBar).agent_count = len(self._agent_windows)
+
+    # ── 焦点上下文提示 ────────────────────────────────────────────────────────
+
+    def on_descendant_focus(self, event) -> None:
+        # 文件树聚焦时在底栏显示文件操作快捷键，失焦切回默认
+        is_filetree = isinstance(event.widget, FileTree)
+        hint = t("status.filetree_hint") if is_filetree else None
+        self.query_one(StatusBar).set_shortcuts(hint)
 
     # ── Alt+N 快切 ────────────────────────────────────────────────────────────
 

@@ -23,6 +23,10 @@ _STRINGS: dict[str, dict[str, str]] = {
     "status.agents":     {"zh": "● {n} agent", "en": "● {n} agent"},
     "status.agents_pl":  {"zh": "● {n} agents", "en": "● {n} agents"},
     "status.shortcuts":  {"zh": "^Q 退出  ^` 终端", "en": "^Q quit  ^` terminal"},
+    "status.filetree_hint": {
+        "zh": "a 新建文件  A 新建夹  r 重命名  d 删除  y 复制路径  Y 相对路径",
+        "en": "a new  A newdir  r rename  d delete  y copy-path  Y rel-path",
+    },
     # ── TaskBar ───────────────────────────────────────────────────────────────
     "taskbar.no_windows": {"zh": "（无打开窗口）", "en": "(no open windows)"},
     # ── FloatWorkspace hint ───────────────────────────────────────────────────

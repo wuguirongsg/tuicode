@@ -86,6 +86,28 @@ def test_app_opens_read_only_diff_preview_from_git_panel(tmp_path: Path, monkeyp
     asyncio.run(run())
 
 
+def test_status_bar_shows_filetree_hint_on_focus(tmp_path: Path, monkeypatch):
+    """文件树聚焦时底栏显示文件操作快捷键，焦点移走后切回默认。"""
+    from tuicode.i18n import t
+    from tuicode.ui.file_tree import FileTree
+    monkeypatch.chdir(tmp_path)
+
+    async def run():
+        app = TuiCodeApp()
+        async with app.run_test(size=(140, 50), headless=True) as pilot:
+            await pilot.pause()
+            sb_right = app.query_one("#sb-right", Static)
+
+            app.query_one(FileTree).focus()
+            await pilot.pause()
+            assert str(sb_right.content) == t("status.filetree_hint")
+
+            app.query_one(StatusBar).set_shortcuts(None)
+            assert str(sb_right.content) == t("status.shortcuts")
+
+    asyncio.run(run())
+
+
 def test_app_agent_count_tracks_open_agent_windows(tmp_path: Path, monkeypatch):
     """feat-019: 底栏 agent_count 随 Agent 浮窗开关增减，不再恒为 0。"""
     monkeypatch.chdir(tmp_path)

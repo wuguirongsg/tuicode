@@ -39,6 +39,10 @@ class StatusBar(Widget):
     def watch_agent_count(self, count: int) -> None:
         self._refresh_left()
 
+    def set_shortcuts(self, text: str | None) -> None:
+        """切换右侧快捷键提示；传 None 恢复默认。"""
+        self.query_one("#sb-right", Static).update(text or t("status.shortcuts"))
+
     def _refresh_left(self) -> None:
         n = self.agent_count
         if n == 0:
