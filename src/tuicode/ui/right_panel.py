@@ -1,4 +1,4 @@
-"""feat-005 文件树 — 右栏 files Tab，DirectoryTree + FileRequested 消息。"""
+"""右侧固定工具栏 — 文件树、Git 状态、stage/unstage/commit 操作。"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,16 +7,17 @@ from textual.app import ComposeResult
 from textual import events
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import DirectoryTree, Static
+from textual.widgets import DirectoryTree, Input, Static
 
 from tuicode.bus import default_bus
 from tuicode.events import FileModified, GitStatusChanged
+from tuicode.git_status import GitError, GitOps
 from tuicode.i18n import t
 from tuicode.ui.mascot import MascotPanel
 
 
 class GitFileList(Widget):
-    """Focusable list of changed Git files."""
+    """Focusable list of changed Git files with stage/unstage support."""
 
     can_focus = True
 
@@ -24,6 +25,13 @@ class GitFileList(Widget):
         def __init__(self, status_line: str) -> None:
             super().__init__()
             self.status_line = status_line
+
+    class StageRequested(Message):
+        """User pressed s (stage) or u (unstage) on the selected file."""
+        def __init__(self, status_line: str, action: str) -> None:
+            super().__init__()
+            self.status_line = status_line
+            self.action = action  # "stage" or "unstage"
 
     DEFAULT_CSS = """
     GitFileList {
@@ -74,6 +82,12 @@ class GitFileList(Widget):
         elif event.key == "enter":
             self.post_message(self.Selected(self._lines[self._selected_index]))
             event.stop()
+        elif event.key == "s":
+            self.post_message(self.StageRequested(self._lines[self._selected_index], "stage"))
+            event.stop()
+        elif event.key == "u":
+            self.post_message(self.StageRequested(self._lines[self._selected_index], "unstage"))
+            event.stop()
 
     def on_click(self, event: events.Click) -> None:
         if not self._lines:
@@ -83,6 +97,54 @@ class GitFileList(Widget):
             self.refresh()
             self.post_message(self.Selected(self._lines[self._selected_index]))
             event.stop()
+
+
+class CommitBar(Widget):
+    """Commit message input + inline status feedback."""
+
+    DEFAULT_CSS = """
+    CommitBar {
+        height: auto;
+        padding: 0 1;
+        background: $panel;
+    }
+    CommitBar Input {
+        height: 1;
+        border: none;
+        background: $surface;
+        color: $text;
+        padding: 0 1;
+    }
+    CommitBar Input:focus {
+        border: none;
+        background: $panel-lighten-1;
+    }
+    CommitBar #commit-status {
+        height: 1;
+        color: $text-muted;
+        padding: 0 1;
+    }
+    CommitBar #commit-status.error {
+        color: $error;
+    }
+    CommitBar #commit-status.success {
+        color: $success;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        yield Input(placeholder="commit message… (Enter)", id="commit-input")
+        yield Static("", id="commit-status")
+
+    def set_status(self, msg: str, style: str = "") -> None:
+        label = self.query_one("#commit-status", Static)
+        label.update(msg)
+        label.remove_class("error", "success")
+        if style:
+            label.add_class(style)
+
+    def clear_input(self) -> None:
+        self.query_one("#commit-input", Input).value = ""
 
 
 class RightPanel(Widget):
@@ -144,6 +206,7 @@ class RightPanel(Widget):
     def __init__(self, root: Path | str | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._root = Path(root) if root else Path.cwd()
+        self._git_ops = GitOps(self._root)
         self._unsubscribe_file_modified = None
         self._unsubscribe_git_status = None
 
@@ -155,6 +218,7 @@ class RightPanel(Widget):
         yield DirectoryTree(self._root, id="file-tree")
         yield Static("git: checking...", id="git-status")
         yield GitFileList(id="git-files")
+        yield CommitBar(id="commit-bar")
 
     def on_mount(self) -> None:
         self._unsubscribe_file_modified = default_bus.subscribe(
@@ -192,6 +256,37 @@ class RightPanel(Widget):
             content = f"git: {branch} · clean"
         self.query_one("#git-status", Static).update(content)
         self.query_one("#git-files", GitFileList).update_files(event.changed_files)
+
+    def on_git_file_list_stage_requested(self, event: GitFileList.StageRequested) -> None:
+        event.stop()
+        rel_path = self._path_from_status_line(event.status_line)
+        if rel_path is None:
+            return
+        commit_bar = self.query_one(CommitBar)
+        try:
+            if event.action == "stage":
+                self._git_ops.stage(str(rel_path))
+                commit_bar.set_status(f"staged {rel_path.name}", "success")
+            else:
+                self._git_ops.unstage(str(rel_path))
+                commit_bar.set_status(f"unstaged {rel_path.name}", "success")
+        except GitError as exc:
+            commit_bar.set_status(str(exc), "error")
+            return
+        self.set_timer(2.0, lambda: commit_bar.set_status(""))
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        event.stop()
+        message = event.value.strip()
+        commit_bar = self.query_one(CommitBar)
+        try:
+            self._git_ops.commit(message)
+        except GitError as exc:
+            commit_bar.set_status(str(exc), "error")
+            return
+        commit_bar.clear_input()
+        commit_bar.set_status("committed", "success")
+        self.set_timer(3.0, lambda: commit_bar.set_status(""))
 
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected

@@ -1,14 +1,17 @@
-"""feat-005 单元测试 — RightPanel 文件树 + FileRequested 消息。"""
+"""feat-005/feat-015 单元测试 — RightPanel 文件树、Git stage/commit。"""
 from __future__ import annotations
 
 import asyncio
+import subprocess
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from textual.app import App, ComposeResult
-from textual.widgets import DirectoryTree, Static
+from textual.widgets import DirectoryTree, Input, Static
 
 from tuicode.events import GitStatusChanged
-from tuicode.ui.right_panel import GitFileList, RightPanel
+from tuicode.git_status import GitError
+from tuicode.ui.right_panel import CommitBar, GitFileList, RightPanel
 
 
 # ── 工具 App ──────────────────────────────────────────────────────────────────
@@ -182,3 +185,205 @@ class TestGitStatus:
 
         asyncio.run(run())
         assert received == [tmp_path / "app.py"]
+
+
+# ── feat-015: GitFileList 键盘 s/u 发送 StageRequested ────────────────────────
+
+
+class TestGitFileListStageKeys:
+    def test_s_key_posts_stage_requested(self):
+        """s 键应发送 StageRequested(action='stage')。"""
+        received: list[GitFileList.StageRequested] = []
+
+        async def run():
+            class _App(App):
+                CSS = "Screen { background: #000; }"
+
+                def compose(self) -> ComposeResult:
+                    yield GitFileList(id="gfl")
+
+                def on_git_file_list_stage_requested(
+                    self, msg: GitFileList.StageRequested
+                ) -> None:
+                    received.append(msg)
+
+            async with _App().run_test(headless=True) as pilot:
+                gfl = pilot.app.query_one("#gfl", GitFileList)
+                gfl.update_files((" M app.py",))
+                gfl.focus()
+                await pilot.pause()
+                await pilot.press("s")
+                await pilot.pause()
+
+        asyncio.run(run())
+        assert len(received) == 1
+        assert received[0].action == "stage"
+        assert received[0].status_line == " M app.py"
+
+    def test_u_key_posts_unstage_requested(self):
+        """u 键应发送 StageRequested(action='unstage')。"""
+        received: list[GitFileList.StageRequested] = []
+
+        async def run():
+            class _App(App):
+                CSS = "Screen { background: #000; }"
+
+                def compose(self) -> ComposeResult:
+                    yield GitFileList(id="gfl")
+
+                def on_git_file_list_stage_requested(
+                    self, msg: GitFileList.StageRequested
+                ) -> None:
+                    received.append(msg)
+
+            async with _App().run_test(headless=True) as pilot:
+                gfl = pilot.app.query_one("#gfl", GitFileList)
+                gfl.update_files(("M  app.py",))
+                gfl.focus()
+                await pilot.pause()
+                await pilot.press("u")
+                await pilot.pause()
+
+        asyncio.run(run())
+        assert len(received) == 1
+        assert received[0].action == "unstage"
+
+
+# ── feat-015: RightPanel stage 处理器 ─────────────────────────────────────────
+
+
+class TestRightPanelStageHandlers:
+    def test_stage_requested_calls_git_ops_stage(self, tmp_path: Path):
+        """GitFileList.StageRequested(stage) 应调用 GitOps.stage。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                panel = pilot.app.query_one(RightPanel)
+                mock_ops = MagicMock()
+                panel._git_ops = mock_ops
+
+                panel.update_git_status(
+                    GitStatusChanged(branch="main", changed_files=(" M app.py",))
+                )
+                await pilot.pause()
+                gfl = pilot.app.query_one(GitFileList)
+                gfl.post_message(GitFileList.StageRequested(" M app.py", "stage"))
+                await pilot.pause()
+
+            mock_ops.stage.assert_called_once_with("app.py")
+
+        asyncio.run(run())
+
+    def test_unstage_requested_calls_git_ops_unstage(self, tmp_path: Path):
+        """GitFileList.StageRequested(unstage) 应调用 GitOps.unstage。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                panel = pilot.app.query_one(RightPanel)
+                mock_ops = MagicMock()
+                panel._git_ops = mock_ops
+
+                panel.update_git_status(
+                    GitStatusChanged(branch="main", changed_files=("M  app.py",))
+                )
+                await pilot.pause()
+                gfl = pilot.app.query_one(GitFileList)
+                gfl.post_message(GitFileList.StageRequested("M  app.py", "unstage"))
+                await pilot.pause()
+
+            mock_ops.unstage.assert_called_once_with("app.py")
+
+        asyncio.run(run())
+
+    def test_stage_error_sets_commit_bar_error_status(self, tmp_path: Path):
+        """GitOps 抛出 GitError 时 CommitBar 应显示错误状态。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                panel = pilot.app.query_one(RightPanel)
+                mock_ops = MagicMock()
+                mock_ops.stage.side_effect = GitError("permission denied")
+                panel._git_ops = mock_ops
+
+                panel.update_git_status(
+                    GitStatusChanged(branch="main", changed_files=(" M f.py",))
+                )
+                await pilot.pause()
+                gfl = pilot.app.query_one(GitFileList)
+                gfl.post_message(GitFileList.StageRequested(" M f.py", "stage"))
+                await pilot.pause()
+
+                label = pilot.app.query_one("#commit-status", Static)
+                assert "permission denied" in str(label.content)
+
+        asyncio.run(run())
+
+
+# ── feat-015: CommitBar 提交流程 ───────────────────────────────────────────────
+
+
+class TestCommitBarFlow:
+    def test_contains_commit_bar(self, tmp_path: Path):
+        """RightPanel 应包含 CommitBar。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                assert pilot.app.query_one(CommitBar) is not None
+
+        asyncio.run(run())
+
+    def test_commit_calls_git_ops_commit(self, tmp_path: Path):
+        """CommitBar 提交后应调用 GitOps.commit 并清空输入框。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                panel = pilot.app.query_one(RightPanel)
+                mock_ops = MagicMock()
+                panel._git_ops = mock_ops
+
+                inp = pilot.app.query_one("#commit-input", Input)
+                inp.focus()
+                await pilot.pause()
+                await pilot.press(*list("fix: my change"))
+                await pilot.press("enter")
+                await pilot.pause()
+
+            mock_ops.commit.assert_called_once_with("fix: my change")
+
+        asyncio.run(run())
+
+    def test_commit_error_preserves_input(self, tmp_path: Path):
+        """GitOps.commit 失败时输入框内容应保留，且显示错误。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                panel = pilot.app.query_one(RightPanel)
+                mock_ops = MagicMock()
+                mock_ops.commit.side_effect = GitError("nothing to commit")
+                panel._git_ops = mock_ops
+
+                inp = pilot.app.query_one("#commit-input", Input)
+                inp.focus()
+                await pilot.pause()
+                await pilot.press(*list("my msg"))
+                await pilot.press("enter")
+                await pilot.pause()
+
+                assert inp.value == "my msg"
+                label = pilot.app.query_one("#commit-status", Static)
+                assert "nothing to commit" in str(label.content)
+
+        asyncio.run(run())
+
+    def test_commit_success_clears_input(self, tmp_path: Path):
+        """GitOps.commit 成功后输入框应清空。"""
+        async def run():
+            async with PanelApp(tmp_path).run_test(headless=True) as pilot:
+                panel = pilot.app.query_one(RightPanel)
+                mock_ops = MagicMock()
+                panel._git_ops = mock_ops
+
+                inp = pilot.app.query_one("#commit-input", Input)
+                inp.focus()
+                await pilot.pause()
+                await pilot.press(*list("good commit"))
+                await pilot.press("enter")
+                await pilot.pause()
+
+                assert inp.value == ""
+
+        asyncio.run(run())
