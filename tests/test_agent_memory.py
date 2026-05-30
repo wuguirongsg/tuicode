@@ -5,6 +5,7 @@ from pathlib import Path
 from tuicode.agent_memory import (
     AgentSessionRecord,
     AgentSessionStore,
+    _extract_osc_title,
     session_brief,
     session_detail,
     strip_terminal_output,
@@ -90,6 +91,90 @@ def test_strip_terminal_output_removes_ansi_and_carriage_returns():
     assert strip_terminal_output("\x1b[31merror\x1b[0m\r\nnext\rline") == (
         "error\nnext\nline"
     )
+
+
+def test_strip_terminal_output_removes_osc_and_charset_sequences():
+    # OSC 窗口标题序列应被完整剥离
+    assert strip_terminal_output("\x1b]0;task title\x07hello") == "hello"
+    # G0 字符集序列（\x1b(B 是 ASCII 字符集）应被剥离
+    assert strip_terminal_output("\x1b(Bhello\x1b(B") == "hello"
+    # 混合场景
+    raw = "\x1b7\x1b8\x1b]0;补充项目 README\x07some output\x1b[0m"
+    result = strip_terminal_output(raw)
+    assert "some output" in result
+    assert "\x1b" not in result
+    assert "补充项目 README" not in result
+
+
+def test_extract_osc_title_finds_task_description():
+    # 标准格式：spinner + 任务名
+    text = "\x1b]0;⠂ 补充项目 README 和开源协议\x07"
+    assert _extract_osc_title(text) == "补充项目 README 和开源协议"
+
+    # 完成状态：✳ + 任务名
+    text2 = "\x1b]0;✳ 补充项目 README 和开源协议\x07"
+    assert _extract_osc_title(text2) == "补充项目 README 和开源协议"
+
+    # 纯 "Claude Code"（空闲状态）不应返回
+    assert _extract_osc_title("\x1b]0;✳ Claude Code\x07") == ""
+
+    # 多个 OSC 标题时取最后一个有意义的
+    multi = "\x1b]0;✳ Claude Code\x07\x1b]0;⠂ 修复登录 Bug\x07"
+    assert _extract_osc_title(multi) == "修复登录 Bug"
+
+
+def test_session_brief_uses_osc_title_first():
+    # osc_title 直接设置时优先于其他内容
+    record = AgentSessionRecord(
+        session_id="abc123ef",
+        project_root="/tmp/project",
+        title="Claude Code",
+        agent_type="claude",
+        command="claude",
+        created_at="2026-05-30T00:00:00+00:00",
+        updated_at="2026-05-30T00:01:00+00:00",
+        summary="一些其他内容",
+        last_output="其他输出",
+        osc_title="重构 pty_terminal.py",
+    )
+    assert session_brief(record) == "重构 pty_terminal.py"
+
+
+def test_append_output_extracts_osc_title(tmp_path: Path):
+    store = AgentSessionStore(project_root=tmp_path / "repo", data_home=tmp_path / "data")
+    store.start_session(
+        session_id="osc12345",
+        title="Claude Code",
+        agent_type="claude",
+        command="claude",
+    )
+    # 包含 OSC 标题的 PTY 输出
+    store.append_output("osc12345", "\x1b]0;✳ 实现用户认证模块\x07some output\n")
+
+    record = store.get("osc12345")
+    assert record is not None
+    assert record.osc_title == "实现用户认证模块"
+    assert session_brief(record) == "实现用户认证模块"
+
+
+def test_finish_session_with_pyte_scrollback(tmp_path: Path):
+    store = AgentSessionStore(project_root=tmp_path / "repo", data_home=tmp_path / "data")
+    store.start_session(
+        session_id="pyte1234",
+        title="Claude Code",
+        agent_type="claude",
+        command="claude",
+        )
+    store.append_output("pyte1234", "\x1b]0;⠂ 修复文件树排序\x07\n")
+
+    scrollback = "修复文件树排序问题\n已更新 file_tree.py\n排序逻辑优化完成"
+    store.finish_session("pyte1234", status="ended", scrollback_text=scrollback)
+
+    record = store.get("pyte1234")
+    assert record is not None
+    assert record.status == "ended"
+    assert "修复文件树排序" in record.summary
+    assert "已更新 file_tree.py" in record.summary
 
 
 def test_session_brief_prefers_meaningful_content():

@@ -477,6 +477,28 @@ class PtyTerminal(Widget):
         except OSError:
             pass
 
+    def get_scrollback_text(self, max_lines: int = 500) -> str:
+        """返回 pyte scrollback 缓冲区中的干净文本（对话历史）。
+
+        scrollback 是已滚出屏幕的历史行，不含状态栏，是最干净的会话内容来源。
+        """
+        screen = self._pyte_screen
+        if screen is None or not screen.scrollback:
+            return ""
+        rows = list(screen.scrollback)[-max_lines:]
+        lines: list[str] = []
+        for row_dict in rows:
+            if not row_dict:
+                lines.append("")
+                continue
+            max_col = max(row_dict.keys(), default=-1)
+            if max_col < 0:
+                lines.append("")
+                continue
+            chars = [row_dict.get(x, _DEFAULT_CHAR).data for x in range(max_col + 1)]
+            lines.append("".join(chars).rstrip())
+        return "\n".join(lines)
+
     # ── 渲染 ──────────────────────────────────────────────────────────────────
 
     def _scrollbar_char(self, y: int) -> str | None:

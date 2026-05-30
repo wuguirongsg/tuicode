@@ -85,6 +85,13 @@ class AgentTerminalWindow(FloatWindow):
         except Exception:
             return False
 
+    def get_session_text(self, max_lines: int = 500) -> str:
+        """返回 pyte scrollback 渲染的干净会话文本，供记忆存储使用。"""
+        try:
+            return self.query_one(PtyTerminal).get_scrollback_text(max_lines=max_lines)
+        except Exception:
+            return ""
+
     def compose_body(self) -> ComposeResult:
         yield PtyTerminal(shell=self._command)
 

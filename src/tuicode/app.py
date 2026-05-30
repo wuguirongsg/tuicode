@@ -170,7 +170,9 @@ class TuiCodeApp(App):
             if isinstance(msg.window, AgentTerminalWindow):
                 self._agent_sessions.discard(msg.window.session_id)
                 self._agent_session_store.finish_session(
-                    msg.window.session_id, status="closed"
+                    msg.window.session_id,
+                    status="closed",
+                    scrollback_text=msg.window.get_session_text(),
                 )
             self._refresh_agent_count()
 
@@ -186,7 +188,9 @@ class TuiCodeApp(App):
         self.query_one(WindowTaskBar).update_window(msg.window)
         if not msg.is_running:
             self._agent_session_store.finish_session(
-                msg.window.session_id, status="ended"
+                msg.window.session_id,
+                status="ended",
+                scrollback_text=msg.window.get_session_text(),
             )
 
     def _refresh_agent_count(self) -> None:
