@@ -63,17 +63,17 @@ class TuiCodeApp(App):
     ENABLE_COMMAND_PALETTE = False  # Ctrl+P 透传给 PTY 子进程，不打开命令面板
 
     BINDINGS = [
-        Binding("ctrl+q", "quit", "退出", priority=True),
-        Binding("ctrl+grave_accent", "focus_terminal", "聚焦终端", priority=True),
-        Binding("ctrl+t", "new_agent_terminal", "新建智能体终端", priority=True),
-        Binding("alt+1", "focus_window(1)", "切换窗口 1", priority=True),
-        Binding("alt+2", "focus_window(2)", "切换窗口 2", priority=True),
-        Binding("alt+3", "focus_window(3)", "切换窗口 3", priority=True),
-        Binding("ctrl+1", "layout_preset(1)", "编辑布局", priority=True),
-        Binding("ctrl+2", "layout_preset(2)", "双 Agent 布局", priority=True),
-        Binding("ctrl+3", "layout_preset(3)", "调试布局", priority=True),
-        Binding("ctrl+underscore", "command_palette", "命令面板", priority=True),
-        Binding("f1", "command_palette", "命令面板", priority=True),
+        Binding("ctrl+q", "quit", t("bind.quit"), priority=True),
+        Binding("ctrl+grave_accent", "focus_terminal", t("bind.focus_terminal"), priority=True),
+        Binding("ctrl+t", "new_agent_terminal", t("bind.new_agent"), priority=True),
+        Binding("alt+1", "focus_window(1)", t("bind.win1"), priority=True),
+        Binding("alt+2", "focus_window(2)", t("bind.win2"), priority=True),
+        Binding("alt+3", "focus_window(3)", t("bind.win3"), priority=True),
+        Binding("ctrl+1", "layout_preset(1)", t("bind.layout_edit"), priority=True),
+        Binding("ctrl+2", "layout_preset(2)", t("bind.layout_dual"), priority=True),
+        Binding("ctrl+3", "layout_preset(3)", t("bind.layout_debug"), priority=True),
+        Binding("ctrl+underscore", "command_palette", t("bind.command_palette"), priority=True),
+        Binding("f1", "command_palette", t("bind.command_palette"), priority=True),
     ]
 
     CSS = """
@@ -178,7 +178,7 @@ class TuiCodeApp(App):
             self.exit()
             return
         self._last_ctrl_c = now
-        self.notify("再按一次 Ctrl+C 退出", timeout=1.5, severity="warning")
+        self.notify(t("app.ctrl_c_hint"), timeout=1.5, severity="warning")
 
     # ── Alt+N 快切 ────────────────────────────────────────────────────────────
 
@@ -264,9 +264,8 @@ class TuiCodeApp(App):
         save_lang(new_lang)
         label = "English" if new_lang == "en" else "中文"
         self.notify(
-            f"界面语言已切换为 {label}，重启后完全生效\n"
-            f"配置文件：~/.config/tuicode/settings.toml",
-            title="语言 / Language",
+            t("app.lang_switched", label=label),
+            title=t("app.lang_title"),
             timeout=5,
         )
 
@@ -277,85 +276,85 @@ class TuiCodeApp(App):
         self.push_screen(CommandPaletteModal(commands))
 
     def _build_palette_commands(self) -> list[PaletteCommand]:
-        _lang_names = {"zh": "中文", "en": "English"}
         _cur_lang = get_lang()
+        _lang_labels = {"zh": "中文", "en": "English"}
         _next_lang = "en" if _cur_lang == "zh" else "zh"
         return [
             PaletteCommand(
-                name="切换主题",
-                description=f"当前：{self.theme}，循环切换配色方案",
+                name=t("cmd.theme.name"),
+                description=t("cmd.theme.desc", theme=self.theme),
                 callback=self.action_toggle_theme,
                 keywords=["theme", "color", "主题", "配色", "dark", "light"],
             ),
             PaletteCommand(
-                name=f"切换界面语言 → {_lang_names[_next_lang]}",
-                description=f"当前：{_lang_names[_cur_lang]}，保存到 ~/.config/tuicode/settings.toml，重启生效",
+                name=t("cmd.lang.name", lang=_lang_labels[_next_lang]),
+                description=t("cmd.lang.desc", cur=_lang_labels[_cur_lang]),
                 callback=self.action_switch_language,
                 keywords=["language", "lang", "语言", "中文", "english", "en", "zh"],
             ),
             PaletteCommand(
-                name="新建 Agent 会话",
-                description="打开 Agent 启动器（Ctrl+T）",
+                name=t("cmd.new_agent.name"),
+                description=t("cmd.new_agent.desc"),
                 callback=lambda: self.call_after_refresh(self.action_new_agent_terminal),
                 keywords=["agent", "claude", "terminal", "bash"],
             ),
             PaletteCommand(
-                name="布局：编辑模式",
-                description="主窗口最大化（Ctrl+1）",
+                name=t("cmd.layout_edit.name"),
+                description=t("cmd.layout_edit.desc"),
                 callback=lambda: self.action_layout_preset(1),
                 keywords=["layout", "preset", "edit"],
             ),
             PaletteCommand(
-                name="布局：双 Agent 对比",
-                description="左右分屏（Ctrl+2）",
+                name=t("cmd.layout_dual.name"),
+                description=t("cmd.layout_dual.desc"),
                 callback=lambda: self.action_layout_preset(2),
                 keywords=["layout", "dual", "split", "compare"],
             ),
             PaletteCommand(
-                name="布局：调试模式",
-                description="上大下小（Ctrl+3）",
+                name=t("cmd.layout_debug.name"),
+                description=t("cmd.layout_debug.desc"),
                 callback=lambda: self.action_layout_preset(3),
                 keywords=["layout", "debug"],
             ),
             PaletteCommand(
-                name="重置窗口位置",
-                description="把所有浮窗拉回可见区域（窗口跑到屏幕外时用）",
+                name=t("cmd.reset_win.name"),
+                description=t("cmd.reset_win.desc"),
                 callback=self.action_reset_windows,
                 keywords=["reset", "window", "position", "重置", "窗口", "复位"],
             ),
             PaletteCommand(
-                name="聚焦底部终端",
-                description="切换焦点到 bash 终端（Ctrl+`）",
+                name=t("cmd.focus_term.name"),
+                description=t("cmd.focus_term.desc"),
                 callback=self.action_focus_terminal,
                 keywords=["terminal", "bash", "focus"],
             ),
             PaletteCommand(
-                name="切换窗口 1",
-                description="置顶第 1 个浮窗（Alt+1）",
+                name=t("cmd.win1.name"),
+                description=t("cmd.win1.desc"),
                 callback=lambda: self.action_focus_window(1),
                 keywords=["window", "focus"],
             ),
             PaletteCommand(
-                name="切换窗口 2",
-                description="置顶第 2 个浮窗（Alt+2）",
+                name=t("cmd.win2.name"),
+                description=t("cmd.win2.desc"),
                 callback=lambda: self.action_focus_window(2),
                 keywords=["window", "focus"],
             ),
             PaletteCommand(
-                name="切换窗口 3",
-                description="置顶第 3 个浮窗（Alt+3）",
+                name=t("cmd.win3.name"),
+                description=t("cmd.win3.desc"),
                 callback=lambda: self.action_focus_window(3),
                 keywords=["window", "focus"],
             ),
             PaletteCommand(
-                name="Git commit（聚焦输入框）",
-                description="将焦点移到右栏 commit 输入框",
+                name=t("cmd.git_commit.name"),
+                description=t("cmd.git_commit.desc"),
                 callback=self._focus_commit_input,
                 keywords=["git", "commit", "stage"],
             ),
             PaletteCommand(
-                name="退出",
-                description="退出 TuiCode（Ctrl+Q）",
+                name=t("cmd.quit.name"),
+                description=t("cmd.quit.desc"),
                 callback=self.action_quit,
                 keywords=["quit", "exit"],
             ),

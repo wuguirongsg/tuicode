@@ -9,6 +9,8 @@ from textual.screen import ModalScreen
 from textual.widget import Widget
 from textual.widgets import Button, Input, Label
 
+from tuicode.i18n import t
+
 
 @dataclass
 class AgentConfig:
@@ -93,15 +95,15 @@ class NewAgentModal(ModalScreen[AgentConfig | None]):
 
     def compose(self) -> ComposeResult:
         with Widget(id="modal-box"):
-            yield Label("新建 Agent 会话", id="modal-title")
+            yield Label(t("agent.modal_title"), id="modal-title")
             with VerticalScroll(id="preset-scroll"):
                 for label, cmd, atype in _PRESETS:
                     yield Button(label, id=f"preset-{atype}", classes="preset-btn", variant="default")
-            yield Label("自定义命令：", id="custom-label")
+            yield Label(t("agent.custom_label"), id="custom-label")
             yield Input(placeholder="e.g. opencode / python agent.py", id="custom-input")
             with Widget(id="btn-row"):
-                yield Button("启动", id="btn-ok", variant="success")
-                yield Button("取消", id="btn-cancel", variant="error")
+                yield Button(t("agent.btn_start"), id="btn-ok", variant="success")
+                yield Button(t("agent.btn_cancel"), id="btn-cancel", variant="error")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         event.stop()

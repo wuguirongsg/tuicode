@@ -10,6 +10,8 @@ from textual.screen import ModalScreen
 from textual.widget import Widget
 from textual.widgets import Input, Label, Static
 
+from tuicode.i18n import t
+
 
 @dataclass
 class PaletteCommand:
@@ -52,7 +54,7 @@ class _CommandList(Widget):
 
     def render(self) -> str:
         if not self._filtered:
-            return "  [dim](无匹配命令)[/]"
+            return f"  [dim]{t('palette.no_match')}[/]"
         lines: list[str] = []
         for i, cmd in enumerate(self._filtered[:16]):
             if i == self._selected_index:
@@ -70,9 +72,9 @@ class CommandPaletteModal(ModalScreen[None]):
     # Screen-level BINDINGS 优先于 Input widget 的内建键处理
     # 注意：enter 不在此处，因为 Input 会消费它并触发 Input.Submitted
     BINDINGS = [
-        ("escape", "close_palette", "关闭"),
-        ("down", "select_down", "下移"),
-        ("up", "select_up", "上移"),
+        ("escape", "close_palette", ""),
+        ("down", "select_down", ""),
+        ("up", "select_up", ""),
     ]
 
     DEFAULT_CSS = """
@@ -116,8 +118,8 @@ class CommandPaletteModal(ModalScreen[None]):
 
     def compose(self) -> ComposeResult:
         with Widget(id="palette-box"):
-            yield Label("> 命令面板", id="palette-title")
-            yield Input(placeholder="搜索命令…", id="palette-input")
+            yield Label(t("palette.title"), id="palette-title")
+            yield Input(placeholder=t("palette.placeholder"), id="palette-input")
             yield _CommandList(id="palette-list")
 
     def on_mount(self) -> None:
