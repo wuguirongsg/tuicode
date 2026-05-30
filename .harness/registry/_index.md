@@ -16,6 +16,12 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-30] FIX Git 面板文件列表改为 ListView 行高亮模式：用 ListView+ListItem 替换旧 render() 纯文本，彩色状态标记 M/A/D/R/??，行级选中高亮，#git-status 固定单行头，22 tests passed
+
+[2026-05-30] DONE i18n 全面补齐：command_palette_modal / new_agent_modal / app.py BINDINGS+notify+PaletteCommand 共 46 个新键，切换英文后 F1 面板和 Ctrl+T 启动器立即生效，201 tests passed
+
+[2026-05-30] FIX 命令面板加「切换界面语言」入口：F1 确认可用；Ctrl+/ 不生效属终端层面拦截（预期）；save_lang() 写 ~/.config/tuicode/settings.toml，notify 提示重启生效；201 tests passed
+
 [2026-05-29] FIX 双击 Ctrl+C 退出：第一次发 \x03 给 PTY + 弹 1.5s toast 提示，窗口内再按一次退出 App；Ctrl+Q 保留备用
 
 [2026-05-29] FIX 命令面板快捷键修复 + 主题切换：Ctrl+Shift+P 无法在终端区分替换为 Ctrl+/ (ctrl+underscore) + F1 双绑；加入主题循环（cyberpunk→textual-dark→nord→gruvbox→textual-light）进命令面板；F1 从 PTY _KEY_MAP 移除并加入保留键集合
