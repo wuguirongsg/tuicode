@@ -465,13 +465,13 @@ class PtyTerminal(Widget):
         except OSError:
             pass
 
-    def write_text(self, text: str) -> None:
+    def write_text(self, text: str, *, bracketed_paste: bool = True) -> None:
         """Programmatically send text to the PTY as if the user pasted it."""
         if self._master_fd is None or not text:
             return
         try:
             data = text.encode("utf-8")
-            if self._bracketed_paste:
+            if bracketed_paste and self._bracketed_paste:
                 data = b"\x1b[200~" + data + b"\x1b[201~"
             os.write(self._master_fd, data)
         except OSError:

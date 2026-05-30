@@ -294,7 +294,7 @@ class TuiCodeApp(App):
         )
         if config is None:
             return
-        prompt = self._agent_session_store.build_continuation_prompt(record.session_id)
+        prompt = self._agent_session_store.build_handoff_notice(record.session_id)
         await self._open_agent_window(config, continuation_prompt=prompt)
 
     async def _open_agent_window(

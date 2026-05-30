@@ -217,3 +217,23 @@ def test_agent_terminal_republishes_pty_output_with_session_id():
             unsubscribe()
 
     asyncio.run(run())
+
+
+def test_continuation_prompt_is_sent_as_direct_submit(monkeypatch):
+    """Continuation handoff should not use bracketed paste or leave text unsubmitted."""
+    sent: list[tuple[str, bool]] = []
+
+    win = AgentTerminalWindow(continuation_prompt="请读取 handoff 文件")
+    monkeypatch.setattr(
+        win,
+        "query_one",
+        lambda _widget: type(
+            "_Pty",
+            (),
+            {"write_text": lambda self, text, *, bracketed_paste=True: sent.append((text, bracketed_paste))},
+        )(),
+    )
+
+    win._send_continuation_prompt()
+
+    assert sent == [("请读取 handoff 文件\r", False)]

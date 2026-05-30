@@ -46,6 +46,26 @@ def test_build_continuation_prompt_is_agent_agnostic(tmp_path: Path):
     assert "请先检查当前工作区和 Git 状态" in prompt
 
 
+def test_handoff_notice_is_short_and_points_to_full_context(tmp_path: Path):
+    store = AgentSessionStore(project_root=tmp_path, data_home=tmp_path / "data")
+    store.start_session(
+        session_id="c0ffee12",
+        title="Claude Code",
+        agent_type="claude",
+        command="claude",
+    )
+    store.append_output("c0ffee12", "line\n" * 300)
+
+    notice = store.build_handoff_notice("c0ffee12")
+
+    assert "\n" not in notice
+    assert "完整上下文已保存到" in notice
+    assert "c0ffee12.md" in notice
+    handoff = store.handoffs_dir / "c0ffee12.md"
+    assert handoff.exists()
+    assert "最近 transcript 片段" in handoff.read_text()
+
+
 def test_closed_does_not_overwrite_ended_status(tmp_path: Path):
     store = AgentSessionStore(project_root=tmp_path, data_home=tmp_path / "data")
     store.start_session(

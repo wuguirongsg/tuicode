@@ -125,7 +125,10 @@ class AgentTerminalWindow(FloatWindow):
             pty = self.query_one(PtyTerminal)
         except Exception:
             return
-        pty.write_text(self._continuation_prompt.rstrip() + "\n")
+        pty.write_text(
+            self._continuation_prompt.rstrip() + "\r",
+            bracketed_paste=False,
+        )
 
     def on_pty_terminal_output_received(
         self, msg: PtyTerminal.OutputReceived

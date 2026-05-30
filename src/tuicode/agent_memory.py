@@ -64,9 +64,11 @@ class AgentSessionStore:
         base = data_home or _default_data_home()
         self.root = base / "tuicode" / "projects" / _project_key(self.project_root)
         self.transcripts_dir = self.root / "transcripts"
+        self.handoffs_dir = self.root / "handoffs"
         self.index_path = self.root / "agent_sessions.json"
         self.root.mkdir(parents=True, exist_ok=True)
         self.transcripts_dir.mkdir(parents=True, exist_ok=True)
+        self.handoffs_dir.mkdir(parents=True, exist_ok=True)
 
     def list_sessions(self, limit: int | None = None) -> list[AgentSessionRecord]:
         records = sorted(
@@ -160,6 +162,26 @@ class AgentSessionStore:
             f"{tail.strip() or '暂无 transcript'}\n"
             "```\n\n"
             "请先检查当前工作区和 Git 状态，再基于以上上下文继续。"
+        )
+
+    def write_continuation_handoff(self, session_id: str) -> Path | None:
+        """Write the full continuation context to a markdown handoff file."""
+        prompt = self.build_continuation_prompt(session_id)
+        if not prompt:
+            return None
+        path = self.handoffs_dir / f"{session_id}.md"
+        path.write_text(prompt + "\n", encoding="utf-8")
+        return path
+
+    def build_handoff_notice(self, session_id: str) -> str:
+        """Build a short one-line prompt that points an agent at the handoff file."""
+        path = self.write_continuation_handoff(session_id)
+        if path is None:
+            return ""
+        return (
+            "请继续上一轮 TuiCode agent 会话。"
+            f"完整上下文已保存到 {path}，请先读取该文件，"
+            "再检查当前工作区和 Git 状态后继续。"
         )
 
     def _load_records(self) -> dict[str, AgentSessionRecord]:
