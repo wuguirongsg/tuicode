@@ -8,6 +8,7 @@ from textual.timer import Timer
 from textual.widget import Widget
 
 from tuicode import __version__
+from tuicode.agent_memory import AgentSessionStore
 from tuicode.bus import default_bus
 from tuicode.events import FileModified, TerminalOutput
 from tuicode.git_diff import GitDiffService
@@ -16,6 +17,7 @@ from tuicode.i18n import get_lang, save_lang, t
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
 from tuicode.ui.command_palette_modal import CommandPaletteModal, PaletteCommand
 from tuicode.ui.new_agent_modal import AgentConfig, NewAgentModal
+from tuicode.ui.agent_session_modal import AgentSessionHistoryModal
 from tuicode.ui.diff_preview_window import DiffPreviewWindow
 from tuicode.ui.editor_window import EditorWindow
 from tuicode.ui.file_tree import FileTree
@@ -110,6 +112,7 @@ class TuiCodeApp(App):
         self._workspace_watcher = WorkspaceWatcher(".")
         self._git_status_poller = GitStatusPoller(".")
         self._git_diff_service = GitDiffService(".")
+        self._agent_session_store = AgentSessionStore(".")
         self._unsubscribe_file_modified = None
         self._unsubscribe_terminal_output = None
         self.set_interval(1.0, self._workspace_watcher.poll)
@@ -133,6 +136,8 @@ class TuiCodeApp(App):
         if self._agent_output_idle_timer is not None:
             self._agent_output_idle_timer.stop()
             self._agent_output_idle_timer = None
+        for session_id in list(getattr(self, "_agent_sessions", ())):
+            self._agent_session_store.finish_session(session_id, status="closed")
         self._workspace_state.close()
 
     def compose(self) -> ComposeResult:
@@ -149,6 +154,12 @@ class TuiCodeApp(App):
         if isinstance(msg.window, AgentTerminalWindow):
             self._agent_windows.add(id(msg.window))
             self._agent_sessions.add(msg.window.session_id)
+            self._agent_session_store.start_session(
+                session_id=msg.window.session_id,
+                title=msg.window._raw_title,
+                agent_type=msg.window.agent_type,
+                command=msg.window._command,
+            )
             self._refresh_agent_count()
         self.query_one(RightPanel).set_mascot_state("opening", auto_reset=2.0)
 
@@ -158,6 +169,9 @@ class TuiCodeApp(App):
             self._agent_windows.discard(id(msg.window))
             if isinstance(msg.window, AgentTerminalWindow):
                 self._agent_sessions.discard(msg.window.session_id)
+                self._agent_session_store.finish_session(
+                    msg.window.session_id, status="closed"
+                )
             self._refresh_agent_count()
 
     def on_float_window_minimize_toggled(
@@ -170,6 +184,10 @@ class TuiCodeApp(App):
     ) -> None:
         # 进程运行/结束切换：刷新任务栏按钮标题（▶/■ 标记跟随）
         self.query_one(WindowTaskBar).update_window(msg.window)
+        if not msg.is_running:
+            self._agent_session_store.finish_session(
+                msg.window.session_id, status="ended"
+            )
 
     def _refresh_agent_count(self) -> None:
         self.query_one(StatusBar).agent_count = len(self._agent_windows)
@@ -177,6 +195,7 @@ class TuiCodeApp(App):
     def _on_terminal_output(self, event: TerminalOutput) -> None:
         if event.session_id not in self._agent_sessions or not event.text:
             return
+        self._agent_session_store.append_output(event.session_id, event.text)
         if not self._agent_output_active:
             self.query_one(RightPanel).set_mascot_state("agent")
             self._agent_output_active = True
@@ -262,13 +281,32 @@ class TuiCodeApp(App):
         if config is not None:
             await self._open_agent_window(config)
 
-    async def _open_agent_window(self, config: AgentConfig) -> None:
+    @work
+    async def action_continue_agent_session(self) -> None:
+        record = await self.push_screen(
+            AgentSessionHistoryModal(self._agent_session_store.list_sessions(limit=20)),
+            wait_for_dismiss=True,
+        )
+        if record is None:
+            return
+        config: AgentConfig | None = await self.push_screen(
+            NewAgentModal(), wait_for_dismiss=True
+        )
+        if config is None:
+            return
+        prompt = self._agent_session_store.build_continuation_prompt(record.session_id)
+        await self._open_agent_window(config, continuation_prompt=prompt)
+
+    async def _open_agent_window(
+        self, config: AgentConfig, continuation_prompt: str = ""
+    ) -> None:
         ws = self.query_one(FloatWorkspace)
         await ws.open_window(
             AgentTerminalWindow(
                 command=config.command,
                 title=config.title,
                 agent_type=config.agent_type,
+                continuation_prompt=continuation_prompt,
             )
         )
 
@@ -332,6 +370,12 @@ class TuiCodeApp(App):
                 description=t("cmd.new_agent.desc"),
                 callback=lambda: self.call_after_refresh(self.action_new_agent_terminal),
                 keywords=["agent", "claude", "terminal", "bash"],
+            ),
+            PaletteCommand(
+                name=t("cmd.continue_agent.name"),
+                description=t("cmd.continue_agent.desc"),
+                callback=lambda: self.call_after_refresh(self.action_continue_agent_session),
+                keywords=["agent", "session", "history", "continue", "memory", "会话", "继续", "历史"],
             ),
             PaletteCommand(
                 name=t("cmd.layout_edit.name"),

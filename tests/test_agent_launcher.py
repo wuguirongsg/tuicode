@@ -6,7 +6,9 @@ import asyncio
 from textual.app import App, ComposeResult
 
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
+from tuicode.ui.agent_session_modal import AgentSessionHistoryModal
 from tuicode.ui.new_agent_modal import AgentConfig, NewAgentModal, _PRESETS
+from tuicode.agent_memory import AgentSessionRecord
 
 
 # ── AgentTerminalWindow 身份属性 ───────────────────────────────────────────────
@@ -34,6 +36,11 @@ class TestAgentTerminalWindowIdentity:
     def test_default_agent_type_is_bash(self):
         win = AgentTerminalWindow()
         assert win.agent_type == "bash"
+
+    def test_can_reuse_saved_session_id_for_memory_reopen(self):
+        win = AgentTerminalWindow(session_id="feed1234")
+        assert win.session_id == "feed1234"
+        assert "feed1234" in win._title
 
 
 # ── NewAgentModal ─────────────────────────────────────────────────────────────
@@ -130,3 +137,35 @@ class TestNewAgentModal:
         assert result is not None
         assert result.command == "myagent --flag"
         assert result.agent_type == "custom"
+
+
+class TestAgentSessionHistoryModal:
+    def test_select_history_session(self):
+        received: list[AgentSessionRecord | None] = []
+        record = AgentSessionRecord(
+            session_id="abc123ef",
+            project_root="/tmp/project",
+            title="Claude Code",
+            agent_type="claude",
+            command="claude",
+            created_at="2026-05-30T00:00:00+00:00",
+            updated_at="2026-05-30T00:01:00+00:00",
+            status="ended",
+        )
+
+        async def run():
+            class _App(App):
+                CSS = "Screen { background: #000; }"
+
+                async def on_mount(self) -> None:
+                    await self.push_screen(
+                        AgentSessionHistoryModal([record]), received.append
+                    )
+
+            async with _App().run_test(headless=True) as pilot:
+                await pilot.pause()
+                await pilot.click("#session-0")
+                await pilot.pause()
+
+        asyncio.run(run())
+        assert received == [record]

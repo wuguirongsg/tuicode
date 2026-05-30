@@ -216,3 +216,17 @@ def test_app_agent_count_tracks_open_agent_windows(tmp_path: Path, monkeypatch):
             assert status.agent_count == 1
 
     asyncio.run(run())
+
+
+def test_command_palette_contains_agent_history_entry(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    async def run():
+        app = TuiCodeApp()
+        async with app.run_test(size=(140, 50), headless=True) as pilot:
+            await pilot.pause()
+            names = [cmd.name for cmd in app._build_palette_commands()]
+            from tuicode.i18n import t
+            assert t("cmd.continue_agent.name") in names
+
+    asyncio.run(run())

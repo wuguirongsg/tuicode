@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-30 21:50] DONE Agent 会话记忆与跨 Agent 接续：保存 PTY transcript/摘要，命令面板可选历史会话并用任意 Agent 继续 → sessions/2026-05-30-2150.md
+
 [2026-05-30] FIX Git 面板 diff 浮窗改为 split（左右对比）视图：_parse_diff 解析 unified diff、_render_split 双列渲染（旧内容红左/新内容绿右），窗口宽度扩至 100，220 tests passed
 
 [2026-05-30] FIX Git 面板状态标识改为通用惯例：U 未追踪、M 修改、A 暂存、D 删除、R 重命名，22 tests passed

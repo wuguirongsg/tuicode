@@ -5,6 +5,7 @@ import uuid
 
 from textual.app import ComposeResult
 from textual.message import Message
+from textual.timer import Timer
 
 from tuicode.bus import default_bus
 from tuicode.events import TerminalOutput
@@ -54,15 +55,20 @@ class AgentTerminalWindow(FloatWindow):
         command: str = "/bin/bash",
         title: str = "Terminal",
         agent_type: str = "bash",
+        session_id: str | None = None,
+        continuation_prompt: str = "",
         **kwargs,
     ) -> None:
         self._command = command
+        self._raw_title = title
         self.agent_type = agent_type
-        self.session_id = uuid.uuid4().hex[:8]
+        self.session_id = session_id or uuid.uuid4().hex[:8]
+        self._continuation_prompt = continuation_prompt
         self._base_title = f"{title} [{self.session_id}]"
         self._status_running = True  # 乐观初值，PTY 通常瞬间起好
         self._seen_running = False   # 见过存活后才允许标记「已结束」，避免启动瞬间误判
-        self._status_timer = None
+        self._status_timer: Timer | None = None
+        self._continuation_timer: Timer | None = None
         super().__init__(title=self._titled(True), **kwargs)
 
     def _titled(self, running: bool) -> str:
@@ -87,11 +93,18 @@ class AgentTerminalWindow(FloatWindow):
         self._status_timer = self.set_interval(
             _STATUS_POLL_INTERVAL, self._check_status
         )
+        if self._continuation_prompt:
+            self._continuation_timer = self.set_timer(
+                0.8, self._send_continuation_prompt
+            )
 
     def on_unmount(self) -> None:
         if self._status_timer is not None:
             self._status_timer.stop()
             self._status_timer = None
+        if self._continuation_timer is not None:
+            self._continuation_timer.stop()
+            self._continuation_timer = None
 
     def _check_status(self) -> None:
         running = self.is_running
@@ -105,6 +118,14 @@ class AgentTerminalWindow(FloatWindow):
         self._title = self._titled(running)
         self._refresh_border()
         self.post_message(self.StatusChanged(self, running))
+
+    def _send_continuation_prompt(self) -> None:
+        self._continuation_timer = None
+        try:
+            pty = self.query_one(PtyTerminal)
+        except Exception:
+            return
+        pty.write_text(self._continuation_prompt.rstrip() + "\n")
 
     def on_pty_terminal_output_received(
         self, msg: PtyTerminal.OutputReceived

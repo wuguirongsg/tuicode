@@ -86,6 +86,8 @@ _STRINGS: dict[str, dict[str, str]] = {
     "agent.custom_label": {"zh": "自定义命令：",    "en": "Custom command:"},
     "agent.btn_start":    {"zh": "启动",            "en": "Start"},
     "agent.btn_cancel":   {"zh": "取消",            "en": "Cancel"},
+    "agent.history_title": {"zh": "继续历史 Agent 会话", "en": "Continue Agent Session"},
+    "agent.history_empty": {"zh": "暂无历史会话",        "en": "No saved sessions yet"},
     # ── App key bindings ──────────────────────────────────────────────────────
     "bind.quit":            {"zh": "退出",           "en": "Quit"},
     "bind.focus_terminal":  {"zh": "聚焦终端",        "en": "Focus terminal"},
@@ -114,6 +116,8 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     "cmd.new_agent.name":    {"zh": "新建 Agent 会话",             "en": "New Agent Session"},
     "cmd.new_agent.desc":    {"zh": "打开 Agent 启动器（Ctrl+T）", "en": "Open agent launcher (Ctrl+T)"},
+    "cmd.continue_agent.name": {"zh": "继续历史 Agent 会话",        "en": "Continue Agent Session"},
+    "cmd.continue_agent.desc": {"zh": "选择历史记忆，再用任意 Agent 接续", "en": "Pick memory, then continue with any agent"},
     "cmd.layout_edit.name":  {"zh": "布局：编辑模式",              "en": "Layout: Edit"},
     "cmd.layout_edit.desc":  {"zh": "主窗口最大化（Ctrl+1）",      "en": "Maximize main window (Ctrl+1)"},
     "cmd.layout_dual.name":  {"zh": "布局：双 Agent 对比",         "en": "Layout: Dual agent"},
