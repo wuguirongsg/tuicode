@@ -1,6 +1,9 @@
-"""右栏吉祥物面板 — Braille 像素艺术机器人，4 行显示 + 状态标签。"""
+"""右栏吉祥物面板 — 彩色 Braille LED 点阵屏，跑马灯 + 状态动画。"""
 from __future__ import annotations
 
+from dataclasses import dataclass
+
+from rich.markup import escape
 from textual.timer import Timer
 from textual.widget import Widget
 from textual.widgets import Static
@@ -19,7 +22,7 @@ _BRAILLE_MAP = [
 
 
 def _to_braille(rows: list[str]) -> list[str]:
-    """'#'/'.' 像素网格（16 行 × 40 列）→ Braille 字符行列表（4 行 × 20 字符）。"""
+    """'#'/'.' 像素网格 → Braille 字符行列表。"""
     result: list[str] = []
     for r in range(0, len(rows), 4):
         chunk = rows[r:r + 4]
@@ -37,89 +40,200 @@ def _to_braille(rows: list[str]) -> list[str]:
     return result
 
 
-# ── 像素帧定义（40 列 × 16 行）────────────────────────────────────────────────
-#
-# 头部居中：pos 12-27（16 像素宽），内部 pos 13-26（14 像素宽）
-# 左眼：pos 15-16  右眼：pos 23-24（2×2，对称）
-# 宽眼：pos 14-17  右宽眼：pos 22-25（4×2，对称）
-# 嘴巴：pos 18-21（4 像素宽，居中）
-# 身体：pos 17-22（6 像素宽，居中于头部下方）
-# 3 对腿：内层 row8-11 / 中层 row10-13 / 外层 row12-15
+# ── LED 点阵屏 ────────────────────────────────────────────────────────────────
+_SCREEN_WIDTH = 40
+_SCREEN_HEIGHT = 12
+_TEXT_TOP = 3
 
-_H0 = "............################............"  # 头部上/下边框（16 宽）
-_HI = "............#..............#............"  # 头部内部空行
-
-# 眼睛行对（row2, row3）
-_EYE_OPEN  = ("............#..##......##..#............",
-              "............#..##......##..#............")
-_EYE_BLINK = ("............#..............#............",
-              "............#..............#............")
-_EYE_HALF  = ("............#..##......##..#............",
-              "............#..............#............")
-_EYE_WIDE  = ("............#.####....####.#............",
-              "............#.####....####.#............")
-
-# 嘴巴行（row5）
-_MOUTH_NEUTRAL = "............#.....####.....#............"  # 4 宽横线
-_MOUTH_HAPPY   = "............#....######....#............"  # 6 宽宽嘴
-_MOUTH_SAD     = "............#......##......#............"  # 2 宽小嘴
-_MOUTH_OPEN    = "............#....##..##....#............"  # O 形
-
-# 腿部固定行（row 8-15）：3 对腿分层展开
-_L0 = ".............##..######..##............."  # 内层腿 row8
-_L1 = "............##...######...##............"  # 内层腿 row9
-_L2 = ".......##..##....######....##..##......."  # 中+内层 row10
-_L3 = "......##..##.....######.....##..##......"  # 中+内层 row11
-
-
-def _build_frame(eyes: tuple[str, str], mouth: str) -> list[str]:
-    return [
-        _H0,       # row 0  头顶边框
-        _HI,       # row 1  内部
-        eyes[0],   # row 2  眼睛上半
-        eyes[1],   # row 3  眼睛下半
-        _HI,       # row 4  内部
-        mouth,     # row 5  嘴巴
-        _HI,       # row 6  内部
-        _H0,       # row 7  头底边框
-        _L0,       # row 8  内层腿
-        _L1,       # row 9
-        _L2,       # row 10 中层腿出现
-        _L3,       # row 11
-    ]
-
-
-# 预计算所有帧的 Braille 字符串
-_FRAMES: dict[str, list[str]] = {
-    k: _to_braille(_build_frame(eyes, mouth))
-    for k, (eyes, mouth) in {
-        "idle_1":  (_EYE_OPEN,  _MOUTH_NEUTRAL),
-        "idle_2":  (_EYE_BLINK, _MOUTH_NEUTRAL),
-        "wide_1":  (_EYE_WIDE,  _MOUTH_HAPPY),
-        "wide_2":  (_EYE_WIDE,  _MOUTH_OPEN),
-        "agent_1": (_EYE_WIDE,  _MOUTH_NEUTRAL),
-        "agent_2": (_EYE_OPEN,  _MOUTH_NEUTRAL),
-        "success": (_EYE_WIDE,  _MOUTH_HAPPY),
-        "error_1": (_EYE_HALF,  _MOUTH_SAD),
-        "error_2": (_EYE_BLINK, _MOUTH_SAD),
-    }.items()
+_FONT_3X5: dict[str, tuple[str, ...]] = {
+    "A": ("###", "#.#", "###", "#.#", "#.#"),
+    "B": ("##.", "#.#", "##.", "#.#", "##."),
+    "C": ("###", "#..", "#..", "#..", "###"),
+    "D": ("##.", "#.#", "#.#", "#.#", "##."),
+    "E": ("###", "#..", "##.", "#..", "###"),
+    "F": ("###", "#..", "##.", "#..", "#.."),
+    "G": ("###", "#..", "#.#", "#.#", "###"),
+    "H": ("#.#", "#.#", "###", "#.#", "#.#"),
+    "I": ("###", ".#.", ".#.", ".#.", "###"),
+    "J": ("..#", "..#", "..#", "#.#", "###"),
+    "K": ("#.#", "#.#", "##.", "#.#", "#.#"),
+    "L": ("#..", "#..", "#..", "#..", "###"),
+    "M": ("#.#", "###", "###", "#.#", "#.#"),
+    "N": ("#.#", "###", "###", "###", "#.#"),
+    "O": ("###", "#.#", "#.#", "#.#", "###"),
+    "P": ("###", "#.#", "###", "#..", "#.."),
+    "Q": ("###", "#.#", "#.#", "###", "..#"),
+    "R": ("###", "#.#", "###", "##.", "#.#"),
+    "S": ("###", "#..", "###", "..#", "###"),
+    "T": ("###", ".#.", ".#.", ".#.", ".#."),
+    "U": ("#.#", "#.#", "#.#", "#.#", "###"),
+    "V": ("#.#", "#.#", "#.#", "#.#", ".#."),
+    "W": ("#.#", "#.#", "###", "###", "#.#"),
+    "X": ("#.#", "#.#", ".#.", "#.#", "#.#"),
+    "Y": ("#.#", "#.#", ".#.", ".#.", ".#."),
+    "Z": ("###", "..#", ".#.", "#..", "###"),
+    "0": ("###", "#.#", "#.#", "#.#", "###"),
+    "1": (".#.", "##.", ".#.", ".#.", "###"),
+    "2": ("###", "..#", "###", "#..", "###"),
+    "3": ("###", "..#", "###", "..#", "###"),
+    "4": ("#.#", "#.#", "###", "..#", "..#"),
+    "5": ("###", "#..", "###", "..#", "###"),
+    "6": ("###", "#..", "###", "#.#", "###"),
+    "7": ("###", "..#", "..#", ".#.", ".#."),
+    "8": ("###", "#.#", "###", "#.#", "###"),
+    "9": ("###", "#.#", "###", "..#", "###"),
+    ":": ("...", ".#.", "...", ".#.", "..."),
+    ".": ("...", "...", "...", "...", ".#."),
+    "-": ("...", "...", "###", "...", "..."),
+    "/": ("..#", "..#", ".#.", "#..", "#.."),
+    "+": ("...", ".#.", "###", ".#.", "..."),
+    "!": (".#.", ".#.", ".#.", "...", ".#."),
+    "?": ("###", "..#", ".#.", "...", ".#."),
+    " ": ("...", "...", "...", "...", "..."),
 }
+
+_PALETTES: dict[str, tuple[str, ...]] = {
+    "cyan": ("#00d4ff", "#00fff0", "#5eead4", "#7dd3fc"),
+    "green": ("#00ff41", "#82ff6a", "#c6ff00", "#00ffa3"),
+    "violet": ("#bf00ff", "#ff4dff", "#00d4ff", "#9f7aea"),
+    "gold": ("#ffe66d", "#ffb703", "#00ff41", "#00d4ff"),
+    "red": ("#ff003c", "#ff6b35", "#ff9f1c", "#ff003c"),
+}
+
+
+@dataclass(frozen=True)
+class _LedState:
+    message: str
+    palette: str
+    mode: str
+    label_key: str
+
 
 # ── 状态配置 ─────────────────────────────────────────────────────────────────
 _TICK = 0.28
 
-_STATE_CFG: dict[str, tuple[float, list[str], str, str]] = {
-    "idle":    (1.2,  ["idle_1", "idle_2"],   "#00d4ff", "mascot.idle"),
-    "opening": (0.20, ["wide_1", "wide_2"],   "#00d4ff", "mascot.opening"),
-    "running": (0.30, ["wide_1", "wide_2"],   "#00ff41", "mascot.running"),
-    "agent":   (0.20, ["agent_1", "agent_2"], "#bf00ff", "mascot.agent"),
-    "success": (1.50, ["success"],            "#00ff41", "mascot.success"),
-    "error":   (0.35, ["error_1", "error_2"], "#ff003c", "mascot.error"),
+_STATE_CFG: dict[str, _LedState] = {
+    "idle": _LedState("TUICODE  READY", "cyan", "marquee", "mascot.idle"),
+    "opening": _LedState("READING  FILE", "cyan", "scan", "mascot.opening"),
+    "running": _LedState("RUNNING  TASK", "green", "wave", "mascot.running"),
+    "agent": _LedState("AGENT  THINKING", "violet", "compute", "mascot.agent"),
+    "success": _LedState("DONE  OK", "gold", "spark", "mascot.success"),
+    "error": _LedState("ERROR  CHECK", "red", "alert", "mascot.error"),
 }
 
 
+def _blank_screen() -> list[list[str]]:
+    return [["." for _ in range(_SCREEN_WIDTH)] for _ in range(_SCREEN_HEIGHT)]
+
+
+def _text_pixels(text: str) -> list[str]:
+    rows = ["" for _ in range(5)]
+    for ch in text.upper():
+        glyph = _FONT_3X5.get(ch, _FONT_3X5["?"])
+        for index, row in enumerate(glyph):
+            rows[index] += row + "."
+    return rows
+
+
+def _draw_marquee(screen: list[list[str]], text: str, tick: int) -> None:
+    text_rows = _text_pixels(text)
+    gap = "." * _SCREEN_WIDTH
+    strip_width = len(text_rows[0]) + _SCREEN_WIDTH
+    offset = tick % max(1, strip_width)
+    for row_index, row in enumerate(text_rows):
+        strip = row + gap
+        visible = strip[offset:offset + _SCREEN_WIDTH]
+        visible = visible.ljust(_SCREEN_WIDTH, ".")
+        for col, pixel in enumerate(visible):
+            if pixel == "#":
+                screen[_TEXT_TOP + row_index][col] = "#"
+
+
+def _draw_scan(screen: list[list[str]], tick: int) -> None:
+    col = (tick * 3) % _SCREEN_WIDTH
+    for row in range(_SCREEN_HEIGHT):
+        screen[row][col] = "#"
+        if col > 0 and row % 2 == 0:
+            screen[row][col - 1] = "#"
+
+
+def _draw_wave(screen: list[list[str]], tick: int) -> None:
+    for col in range(_SCREEN_WIDTH):
+        if (col + tick) % 4 == 0:
+            screen[0][col] = "#"
+        if (col - tick) % 5 == 0:
+            screen[_SCREEN_HEIGHT - 1][col] = "#"
+    for index in range(5):
+        col = (tick * 2 + index * 7) % _SCREEN_WIDTH
+        screen[1 + index % 2][col] = "#"
+        screen[9 + index % 2][(_SCREEN_WIDTH - 1) - col] = "#"
+
+
+def _draw_compute(screen: list[list[str]], tick: int) -> None:
+    for col in range(_SCREEN_WIDTH):
+        if (col * 3 + tick) % 7 == 0:
+            screen[0][col] = "#"
+        if (col * 5 + tick) % 11 == 0:
+            screen[1][col] = "#"
+        if (col * 2 - tick) % 9 == 0:
+            screen[10][col] = "#"
+        if (col + tick) % 6 == 0:
+            screen[11][col] = "#"
+
+
+def _draw_spark(screen: list[list[str]], tick: int) -> None:
+    anchors = (4, 11, 19, 28, 35)
+    for index, col in enumerate(anchors):
+        radius = (tick + index) % 3
+        row = 1 + (index % 4) * 3
+        for dr, dc in ((0, 0), (-radius, 0), (radius, 0), (0, -radius), (0, radius)):
+            rr = row + dr
+            cc = col + dc
+            if 0 <= rr < _SCREEN_HEIGHT and 0 <= cc < _SCREEN_WIDTH:
+                screen[rr][cc] = "#"
+
+
+def _draw_alert(screen: list[list[str]], tick: int) -> None:
+    if tick % 2 == 0:
+        for col in range(_SCREEN_WIDTH):
+            screen[0][col] = "#"
+            screen[_SCREEN_HEIGHT - 1][col] = "#"
+        for row in range(_SCREEN_HEIGHT):
+            screen[row][0] = "#"
+            screen[row][_SCREEN_WIDTH - 1] = "#"
+
+
+def _render_led_frame(state: str, tick: int) -> list[str]:
+    cfg = _STATE_CFG[state if state in _STATE_CFG else "idle"]
+    screen = _blank_screen()
+    if cfg.mode == "scan":
+        _draw_scan(screen, tick)
+    elif cfg.mode == "wave":
+        _draw_wave(screen, tick)
+    elif cfg.mode == "compute":
+        _draw_compute(screen, tick)
+    elif cfg.mode == "spark":
+        _draw_spark(screen, tick)
+    elif cfg.mode == "alert":
+        _draw_alert(screen, tick)
+    _draw_marquee(screen, cfg.message, tick)
+    return _to_braille(["".join(row) for row in screen])
+
+
+def _colorize_braille(rows: list[str], palette_name: str, tick: int) -> str:
+    palette = _PALETTES[palette_name]
+    colored_rows: list[str] = []
+    for row_index, row in enumerate(rows):
+        cells = []
+        for col, char in enumerate(row):
+            color = palette[(col + row_index + tick) % len(palette)]
+            cells.append(f"[bold {color}]{escape(char)}[/]")
+        colored_rows.append("".join(cells))
+    return "\n".join(colored_rows)
+
+
 class MascotPanel(Widget):
-    """右栏吉祥物面板：4 行 Braille 机器人 + 1 行状态标签，共占 5 行。"""
+    """右栏 LED 点阵屏：3 行 Braille 屏幕 + 1 行状态标签，共占 5 行。"""
 
     DEFAULT_CSS = """
     MascotPanel {
@@ -161,17 +275,13 @@ class MascotPanel(Widget):
         self._refresh_display()
 
     def _refresh_display(self) -> None:
-        spf, frame_names, color, key = _STATE_CFG[self._state]
-        ticks_per_frame = max(1, round(spf / _TICK))
-        fname = frame_names[(self._ticks // ticks_per_frame) % len(frame_names)]
-        braille_rows = _FRAMES[fname]
+        cfg = _STATE_CFG[self._state]
+        braille_rows = _render_led_frame(self._state, self._ticks)
+        art = _colorize_braille(braille_rows, cfg.palette, self._ticks)
 
-        if self._state == "idle":
-            art = "\n".join(f"[dim #00d4ff]{row}[/]" for row in braille_rows)
-            label = f"[dim]{t(key)}[/]"
-        else:
-            art = "\n".join(f"[bold {color}]{row}[/]" for row in braille_rows)
-            label = f"[bold {color}]{t(key)}[/]"
+        label_color = _PALETTES[cfg.palette][self._ticks % len(_PALETTES[cfg.palette])]
+        label_style = "dim" if self._state == "idle" else f"bold {label_color}"
+        label = f"[{label_style}]{t(cfg.label_key)}[/]"
 
         self.query_one("#mp-art", Static).update(art)
         self.query_one("#mp-label", Static).update(label)

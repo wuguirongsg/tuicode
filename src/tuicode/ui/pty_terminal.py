@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 import pyte
 from rich.segment import Segment
 from rich.style import Style
+from textual.message import Message
 from textual.strip import Strip
 from textual.widget import Widget
 
@@ -162,6 +163,14 @@ class _ScrollbackScreen(pyte.Screen):
 class PtyTerminal(Widget):
     """PTY + pyte 虚拟终端，含滚动历史和鼠标滚轮支持。"""
 
+    class OutputReceived(Message):
+        """PTY 子进程产生输出。"""
+
+        def __init__(self, terminal: "PtyTerminal", data: bytes) -> None:
+            super().__init__()
+            self.terminal = terminal
+            self.data = data
+
     DEFAULT_CSS = """
     PtyTerminal {
         width: 1fr;
@@ -272,6 +281,7 @@ class PtyTerminal(Widget):
                 for m in _RE_BPASTE_MODE.finditer(data):
                     self._bracketed_paste = m.group(1) == b"h"
                 self._pyte_stream.feed(data)
+                self.post_message(self.OutputReceived(self, data))
                 if self._scroll_offset > 0:
                     self._scroll_offset = 0
                     self._update_scroll_indicator()

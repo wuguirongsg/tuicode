@@ -6,6 +6,8 @@ import asyncio
 import pytest
 from textual.app import App, ComposeResult
 
+from tuicode.bus import default_bus
+from tuicode.events import TerminalOutput
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
 from tuicode.ui.editor_window import EditorWindow
 from tuicode.ui.float_window import FloatWindow
@@ -187,5 +189,31 @@ def test_agent_status_flips_to_ended_when_process_dies():
             win._check_status()
             assert win._status_running is False
             assert win._title.startswith("■")
+
+    asyncio.run(run())
+
+
+def test_agent_terminal_republishes_pty_output_with_session_id():
+    """Agent PTY 输出应转换为带稳定 session_id 的 TerminalOutput 事件。"""
+    async def run():
+        app = _AgentApp()
+        received: list[TerminalOutput] = []
+        unsubscribe = default_bus.subscribe(TerminalOutput, received.append)
+        try:
+            async with app.run_test(size=(120, 40)) as pilot:
+                win = await app.open_agent(title="Claude")
+                await pilot.pause(0.3)
+                pty = win.query_one(PtyTerminal)
+
+                win.on_pty_terminal_output_received(
+                    PtyTerminal.OutputReceived(pty, b"thinking...\n")
+                )
+
+                assert received[-1] == TerminalOutput(
+                    session_id=win.session_id,
+                    text="thinking...\n",
+                )
+        finally:
+            unsubscribe()
 
     asyncio.run(run())

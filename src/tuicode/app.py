@@ -4,11 +4,12 @@ from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.theme import Theme
+from textual.timer import Timer
 from textual.widget import Widget
 
 from tuicode import __version__
 from tuicode.bus import default_bus
-from tuicode.events import FileModified
+from tuicode.events import FileModified, TerminalOutput
 from tuicode.git_diff import GitDiffService
 from tuicode.git_status import GitStatusPoller
 from tuicode.i18n import get_lang, save_lang, t
@@ -101,23 +102,37 @@ class TuiCodeApp(App):
         ))
         self.theme = "cyberpunk"
         self._agent_windows: set[int] = set()  # 打开的 Agent 浮窗 id 集合（驱动底栏计数）
+        self._agent_sessions: set[str] = set()
+        self._agent_output_active = False
+        self._agent_output_idle_timer: Timer | None = None
         self._last_ctrl_c: float = 0.0  # 全局双击 Ctrl+C 退出计时
         self._workspace_state = WorkspaceStateAggregator()
         self._workspace_watcher = WorkspaceWatcher(".")
         self._git_status_poller = GitStatusPoller(".")
         self._git_diff_service = GitDiffService(".")
         self._unsubscribe_file_modified = None
+        self._unsubscribe_terminal_output = None
         self.set_interval(1.0, self._workspace_watcher.poll)
         self.set_interval(1.0, self._git_status_poller.poll)
         self._unsubscribe_file_modified = default_bus.subscribe(
             FileModified,
             lambda _: self._git_status_poller.poll(),
         )
+        self._unsubscribe_terminal_output = default_bus.subscribe(
+            TerminalOutput,
+            self._on_terminal_output,
+        )
 
     def on_unmount(self) -> None:
         if self._unsubscribe_file_modified is not None:
             self._unsubscribe_file_modified()
             self._unsubscribe_file_modified = None
+        if self._unsubscribe_terminal_output is not None:
+            self._unsubscribe_terminal_output()
+            self._unsubscribe_terminal_output = None
+        if self._agent_output_idle_timer is not None:
+            self._agent_output_idle_timer.stop()
+            self._agent_output_idle_timer = None
         self._workspace_state.close()
 
     def compose(self) -> ComposeResult:
@@ -133,6 +148,7 @@ class TuiCodeApp(App):
         await self.query_one(WindowTaskBar).add_window(msg.window)
         if isinstance(msg.window, AgentTerminalWindow):
             self._agent_windows.add(id(msg.window))
+            self._agent_sessions.add(msg.window.session_id)
             self._refresh_agent_count()
         self.query_one(RightPanel).set_mascot_state("opening", auto_reset=2.0)
 
@@ -140,6 +156,8 @@ class TuiCodeApp(App):
         await self.query_one(WindowTaskBar).remove_window(msg.window)
         if id(msg.window) in self._agent_windows:
             self._agent_windows.discard(id(msg.window))
+            if isinstance(msg.window, AgentTerminalWindow):
+                self._agent_sessions.discard(msg.window.session_id)
             self._refresh_agent_count()
 
     def on_float_window_minimize_toggled(
@@ -155,6 +173,23 @@ class TuiCodeApp(App):
 
     def _refresh_agent_count(self) -> None:
         self.query_one(StatusBar).agent_count = len(self._agent_windows)
+
+    def _on_terminal_output(self, event: TerminalOutput) -> None:
+        if event.session_id not in self._agent_sessions or not event.text:
+            return
+        if not self._agent_output_active:
+            self.query_one(RightPanel).set_mascot_state("agent")
+            self._agent_output_active = True
+        if self._agent_output_idle_timer is not None:
+            self._agent_output_idle_timer.stop()
+        self._agent_output_idle_timer = self.set_timer(
+            0.9, self._clear_agent_output_active
+        )
+
+    def _clear_agent_output_active(self) -> None:
+        self._agent_output_active = False
+        self._agent_output_idle_timer = None
+        self.query_one(RightPanel).set_mascot_state("idle")
 
     # ── 焦点上下文提示 ────────────────────────────────────────────────────────
 

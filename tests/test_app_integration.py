@@ -9,10 +9,11 @@ from pathlib import Path
 from textual.widgets import Static
 
 from tuicode.app import TuiCodeApp
-from tuicode.events import GitStatusChanged
+from tuicode.events import GitStatusChanged, TerminalOutput
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
 from tuicode.ui.diff_preview_window import DiffPreviewWindow
 from tuicode.ui.editor_window import EditorWindow
+from tuicode.ui.mascot import MascotPanel
 from tuicode.ui.right_panel import GitFileList, RightPanel
 from tuicode.ui.status_bar import StatusBar
 from tuicode.ui.workspace import FloatWorkspace
@@ -124,6 +125,46 @@ def test_double_ctrl_c_exits_globally(tmp_path: Path, monkeypatch):
 
             app._ctrl_c_pressed()  # 立即第二次
             assert exited == [True]
+
+    asyncio.run(run())
+
+
+def test_agent_output_drives_mascot_compute_animation(tmp_path: Path, monkeypatch):
+    """只有真实 Agent 输出会把右上角点阵屏切到运算动画，静默后回 idle。"""
+    monkeypatch.chdir(tmp_path)
+
+    async def run():
+        app = TuiCodeApp()
+        async with app.run_test(size=(140, 50), headless=True) as pilot:
+            await pilot.pause()
+            app._agent_sessions.add("agent-1")
+
+            app._on_terminal_output(TerminalOutput(session_id="agent-1", text="delta"))
+            await pilot.pause()
+            assert app.query_one(MascotPanel)._state == "agent"
+            assert app._agent_output_active is True
+
+            await pilot.pause(1.0)
+            assert app.query_one(MascotPanel)._state == "idle"
+            assert app._agent_output_active is False
+
+    asyncio.run(run())
+
+
+def test_non_agent_terminal_output_does_not_drive_mascot(tmp_path: Path, monkeypatch):
+    """底部普通终端或未知 session 输出不触发 Agent 运算灯效。"""
+    monkeypatch.chdir(tmp_path)
+
+    async def run():
+        app = TuiCodeApp()
+        async with app.run_test(size=(140, 50), headless=True) as pilot:
+            await pilot.pause()
+
+            app._on_terminal_output(TerminalOutput(session_id="bash", text="ls\n"))
+            await pilot.pause()
+
+            assert app.query_one(MascotPanel)._state == "idle"
+            assert app._agent_output_active is False
 
     asyncio.run(run())
 

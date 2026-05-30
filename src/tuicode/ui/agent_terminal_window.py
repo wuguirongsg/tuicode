@@ -6,6 +6,8 @@ import uuid
 from textual.app import ComposeResult
 from textual.message import Message
 
+from tuicode.bus import default_bus
+from tuicode.events import TerminalOutput
 from tuicode.ui.float_window import FloatWindow
 from tuicode.ui.pty_terminal import PtyTerminal
 
@@ -37,6 +39,15 @@ class AgentTerminalWindow(FloatWindow):
             super().__init__()
             self.window = window
             self.is_running = is_running
+
+    class OutputReceived(Message):
+        """Agent PTY 会话产生输出。"""
+
+        def __init__(self, window: "AgentTerminalWindow", text: str) -> None:
+            super().__init__()
+            self.window = window
+            self.session_id = window.session_id
+            self.text = text
 
     def __init__(
         self,
@@ -94,3 +105,12 @@ class AgentTerminalWindow(FloatWindow):
         self._title = self._titled(running)
         self._refresh_border()
         self.post_message(self.StatusChanged(self, running))
+
+    def on_pty_terminal_output_received(
+        self, msg: PtyTerminal.OutputReceived
+    ) -> None:
+        """把底层 PTY 输出转换为稳定 Agent session 输出信号。"""
+        text = msg.data.decode("utf-8", errors="replace")
+        default_bus.publish(TerminalOutput(session_id=self.session_id, text=text))
+        self.post_message(self.OutputReceived(self, text))
+        msg.stop()
