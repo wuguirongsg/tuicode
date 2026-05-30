@@ -22,18 +22,14 @@ def _status_markup(xy: str) -> str:
     x = xy[0] if xy else "?"
     y = xy[1] if len(xy) > 1 else " "
     if xy == "??":
-        return "[dim]?[/dim]"
+        return "[green]U[/green]"
     if x == "R":
         return "[cyan]R[/cyan]"
     if x == "A":
         return "[green]A[/green]"
     if x == "D" or y == "D":
         return "[red]D[/red]"
-    if x == "M" and y == "M":
-        return "[yellow]±[/yellow]"
-    if x == "M":
-        return "[green]M[/green]"
-    if y == "M":
+    if x == "M" or y == "M":
         return "[yellow]M[/yellow]"
     return "[dim]?[/dim]"
 
