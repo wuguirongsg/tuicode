@@ -102,8 +102,9 @@ class GitFileList(Widget):
             path_str = line[3:].strip()
             if " -> " in path_str:
                 path_str = path_str.rsplit(" -> ", 1)[1]
-            filename = Path(path_str.strip('"')).name
-            lv.append(ListItem(Label(f"{_status_markup(xy)}  {filename}"), name=line))
+            path = Path(path_str.strip('"'))
+            icon = "📁" if path_str.endswith("/") else "📄"
+            lv.append(ListItem(Label(f"{_status_markup(xy)}  {icon} {path.name}"), name=line))
         # lv.append schedules async mount; sync index after items are mounted
         if lines:
             self.call_later(self._sync_lv_index)
