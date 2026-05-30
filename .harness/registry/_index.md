@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-30] FIX Git 面板文件列表加文件/目录图标：📄 普通文件、📁 目录（路径以 / 结尾），22 tests passed
+
 [2026-05-30] FIX Git 面板文件列表改为 ListView 行高亮模式：用 ListView+ListItem 替换旧 render() 纯文本，彩色状态标记 M/A/D/R/??，行级选中高亮，#git-status 固定单行头，22 tests passed
 
 [2026-05-30] DONE i18n 全面补齐：command_palette_modal / new_agent_modal / app.py BINDINGS+notify+PaletteCommand 共 46 个新键，切换英文后 F1 面板和 Ctrl+T 启动器立即生效，201 tests passed
