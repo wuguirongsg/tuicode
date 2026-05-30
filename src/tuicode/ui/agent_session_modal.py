@@ -19,7 +19,7 @@ class AgentSessionDetailModal(ModalScreen[bool]):
         align: center middle;
     }
     AgentSessionDetailModal #detail-box {
-        width: 84;
+        width: 78;
         height: 88vh;
         border: round $accent;
         background: $surface;
@@ -89,7 +89,7 @@ class AgentSessionHistoryModal(ModalScreen[AgentSessionRecord | None]):
         align: center middle;
     }
     AgentSessionHistoryModal #history-box {
-        width: 82;
+        width: 78;
         height: auto;
         max-height: 88vh;
         border: round $accent;
@@ -105,6 +105,7 @@ class AgentSessionHistoryModal(ModalScreen[AgentSessionRecord | None]):
     }
     AgentSessionHistoryModal .session-btn {
         width: 1fr;
+        height: 3;
         margin-bottom: 0;
     }
     AgentSessionHistoryModal #history-empty {
@@ -127,10 +128,10 @@ class AgentSessionHistoryModal(ModalScreen[AgentSessionRecord | None]):
             if not self._sessions:
                 yield Static(t("agent.history_empty"), id="history-empty")
             for idx, session in enumerate(self._sessions):
-                updated = session.updated_at.replace("T", " ")[:16]
+                updated = session.updated_at.replace("T", " ")[:10]
+                brief = session_brief(session, max_len=34)
                 label = (
-                    f"{t('agent.btn_view')}  {session_brief(session)}  "
-                    f"[{updated} · {session.agent_type} · {session.status}]"
+                    f"{brief}  [{updated} {session.agent_type} {session.status}]"
                 )
                 yield Button(label, id=f"session-{idx}", classes="session-btn")
             yield Button(t("agent.btn_cancel"), id="history-cancel", variant="error")

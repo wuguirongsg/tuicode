@@ -108,6 +108,26 @@ def test_session_brief_prefers_meaningful_content():
     assert session_brief(record) == "目标：实现会话详情预览"
 
 
+def test_session_brief_filters_terminal_ui_noise():
+    record = AgentSessionRecord(
+        session_id="abc123ef",
+        project_root="/tmp/project",
+        title="Claude Code",
+        agent_type="claude",
+        command="claude",
+        created_at="2026-05-30T00:00:00+00:00",
+        updated_at="2026-05-30T00:01:00+00:00",
+        summary="",
+        last_output=(
+            "▶▶bypasspermissionson (shift+tabtocycle) foragents\n"
+            "Sonnet4.6withhigheffort ClaudePro\n"
+            "目标：继续优化历史会话展示\n"
+        ),
+    )
+
+    assert session_brief(record) == "目标：继续优化历史会话展示"
+
+
 def test_session_detail_contains_review_context():
     record = AgentSessionRecord(
         session_id="abc123ef",
@@ -124,7 +144,32 @@ def test_session_detail_contains_review_context():
     )
 
     detail = session_detail(record)
-    assert "会话：Codex (codex)" in detail
+    assert "Codex · codex · ended" in detail
     assert "摘要内容" in detail
     assert "最近输出" in detail
     assert "/tmp/transcript.txt" in detail
+
+
+def test_session_detail_omits_noisy_terminal_chrome():
+    record = AgentSessionRecord(
+        session_id="abc123ef",
+        project_root="/tmp/project",
+        title="Claude Code",
+        agent_type="claude",
+        command="claude --dangerously-skip-permissions",
+        created_at="2026-05-30T00:00:00+00:00",
+        updated_at="2026-05-30T00:01:00+00:00",
+        status="closed",
+        summary="记录了 Claude Code 的 PTY 会话输出；\n任务：整理会话列表",
+        last_output=(
+            "▶▶bypasspermissionson (shift+tabtocycle) foragents\n"
+            "ClaudeCodev2.1.158\n"
+            "修复：列表标题不再混乱\n"
+        ),
+    )
+
+    detail = session_detail(record)
+    assert "bypasspermissions" not in detail
+    assert "ClaudeCodev" not in detail
+    assert "任务：整理会话列表" in detail
+    assert "修复：列表标题不再混乱" in detail

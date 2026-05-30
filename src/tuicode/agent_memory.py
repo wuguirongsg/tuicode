@@ -18,6 +18,16 @@ import re
 _ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 _MAX_TAIL_CHARS = 6000
 _IGNORE_LINE_PREFIXES = ("记录了 ", "以下是", "```", "╭", "╰", "│", "─")
+_NOISE_SUBSTRINGS = (
+    "shift+tab",
+    "bypasspermissions",
+    "ClaudeCode",
+    "Sonnet",
+    "opus",
+    "haiku",
+    "sourceCode/tuicode",
+    "for agents",
+)
 
 
 @dataclass
@@ -54,14 +64,15 @@ def _project_key(root: Path) -> str:
 def strip_terminal_output(text: str) -> str:
     """Remove common terminal control sequences before writing memory files."""
     text = _ANSI_RE.sub("", text)
-    return text.replace("\r\n", "\n").replace("\r", "\n")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    return "".join(ch for ch in text if ch == "\n" or ch == "\t" or ord(ch) >= 32)
 
 
 def session_brief(record: AgentSessionRecord, max_len: int = 46) -> str:
     """Return a human-readable description for a saved Agent session."""
     candidates = _meaningful_lines(record.summary) + _meaningful_lines(record.last_output)
     if not candidates:
-        return "暂无摘要"
+        return f"{record.title} 会话"
 
     preferred = (
         "目标", "需求", "任务", "实现", "修复", "问题", "方案",
@@ -75,31 +86,72 @@ def session_brief(record: AgentSessionRecord, max_len: int = 46) -> str:
 
 def session_detail(record: AgentSessionRecord, output_chars: int = 1600) -> str:
     """Build a compact detail view for review before continuing."""
-    summary = record.summary.strip() or "暂无自动摘要"
-    tail = record.last_output.strip()[-output_chars:] or "暂无最近输出"
+    updated = record.updated_at.replace("T", " ")[:19]
+    transcript = _short_path(record.transcript_path)
+    overview = session_brief(record, max_len=72)
+    summary_lines = _display_lines(record.summary, limit=6)
+    output_lines = _display_lines(record.last_output[-output_chars:], limit=10)
     return (
-        f"会话：{record.title} ({record.agent_type})\n"
-        f"状态：{record.status}\n"
-        f"更新时间：{record.updated_at}\n"
-        f"命令：{record.command}\n"
-        f"Transcript：{record.transcript_path or '暂无'}\n\n"
-        f"摘要：\n{summary}\n\n"
-        f"最近输出：\n{tail}"
+        f"{record.title} · {record.agent_type} · {record.status}\n"
+        f"更新时间  {updated}\n"
+        f"命令      {_clip(record.command, 72)}\n"
+        f"Transcript {transcript}\n\n"
+        f"概要\n{overview}\n\n"
+        f"摘要摘录\n{_format_bullets(summary_lines)}\n\n"
+        f"最近关键输出\n{_format_bullets(output_lines)}"
     )
 
 
 def _meaningful_lines(text: str) -> list[str]:
     lines: list[str] = []
     for raw in strip_terminal_output(text).splitlines():
-        line = re.sub(r"\s+", " ", raw).strip()
+        line = _clean_line(raw)
         if len(line) < 4:
             continue
         if line.startswith(_IGNORE_LINE_PREFIXES):
+            continue
+        low = line.lower()
+        if any(token.lower() in low for token in _NOISE_SUBSTRINGS):
             continue
         if all(ch in "-_=*#~·. " for ch in line):
             continue
         lines.append(line)
     return lines
+
+
+def _display_lines(text: str, limit: int) -> list[str]:
+    seen: set[str] = set()
+    lines: list[str] = []
+    for line in _meaningful_lines(text):
+        clipped = _clip(line, 78)
+        if clipped in seen:
+            continue
+        seen.add(clipped)
+        lines.append(clipped)
+        if len(lines) >= limit:
+            break
+    return lines
+
+
+def _format_bullets(lines: list[str]) -> str:
+    if not lines:
+        return "  暂无可展示内容"
+    return "\n".join(f"  - {line}" for line in lines)
+
+
+def _clean_line(raw: str) -> str:
+    line = re.sub(r"\s+", " ", raw).strip()
+    line = line.strip(" \t-_=*#~·.▶■●○□▪▫┃│╭╮╰╯━─┏┓┗┛")
+    return line
+
+
+def _short_path(path: str, max_len: int = 72) -> str:
+    if not path:
+        return "暂无"
+    home = str(Path.home())
+    if path.startswith(home):
+        path = "~" + path[len(home):]
+    return _clip(path, max_len)
 
 
 def _clip(text: str, max_len: int) -> str:
