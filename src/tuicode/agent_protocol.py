@@ -70,7 +70,7 @@ class AgentAdapter(Protocol):
     新增适配器时：
     1. 实现所有方法
     2. 在 AgentCapabilities 中声明能力
-    3. 不修改宿主层（AgentDeck 不依赖具体适配器类）
+    3. 不修改宿主层（TuiCode 不依赖具体适配器类）
     """
 
     agent_id: str

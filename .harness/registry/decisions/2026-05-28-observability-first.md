@@ -28,6 +28,6 @@ Phase 1 交付标准调整为：
 
 ## 后续
 
-- 更新 `docs/agentdeck_architecture.md` Phase 1/2/3 路线。
+- 更新 `docs/tuicode_architecture.md` Phase 1/2/3 路线。
 - 更新 backlog 和 current sprint 目标。
 - `features.json` 当前规则禁止修改 description，需由用户确认后手动调整或新增替代 feat 条目。

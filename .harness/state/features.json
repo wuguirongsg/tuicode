@@ -7,7 +7,7 @@
     {
       "id": "feat-001",
       "description": "应用骨架与混合布局容器 — Textual App 主入口，建立左主区（浮窗工作区）/右栏（工具栏）/底部栏（运行终端）三段栅格",
-      "acceptance": "运行 `python -m agentdeck` 启动后可见三段布局，状态栏显示版本号，Ctrl+Q 退出不报错",
+      "acceptance": "运行 `python -m tuicode` 启动后可见三段布局，状态栏显示版本号，Ctrl+Q 退出不报错",
       "depends_on": [],
       "passes": true
     },

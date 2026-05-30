@@ -13,11 +13,11 @@
 
 **解决什么**：智能体在终端里能写代码，但文件查看、外部变更感知、Git 状态、运行终端和多个智能体会话分散在不同工具中——开发者被迫在 CLI 智能体、编辑器、Git 工具和终端之间不断切上下文。
 
-**一句话定位**：为终端编程智能体设计的统一 TUI 工作台，把"编辑器 + 文件 + 多终端 + Git + 多智能体会话 + 工作区状态同步"整合为一致体验（见 [docs/agentdeck_architecture.md](../../docs/agentdeck_architecture.md) §1）。
+**一句话定位**：为终端编程智能体设计的统一 TUI 工作台，把"编辑器 + 文件 + 多终端 + Git + 多智能体会话 + 工作区状态同步"整合为一致体验（见 [docs/tuicode_architecture.md](../../docs/tuicode_architecture.md) §1）。
 
 **成功标准**：
-- 目标用户在做日常 AI 编程任务时全程不离开 AgentDeck（编辑、查 diff、跑命令、与多个智能体对话、提交 Git）
-- Claude Code / Codex / Aider 在 PTY 浮窗中工作后，AgentDeck 能自动感知文件和 Git 状态变化
+- 目标用户在做日常 AI 编程任务时全程不离开 TuiCode（编辑、查 diff、跑命令、与多个智能体对话、提交 Git）
+- Claude Code / Codex / Aider 在 PTY 浮窗中工作后，TuiCode 能自动感知文件和 Git 状态变化
 - 能在 SSH 远程机器上原生使用，不依赖 GUI
 - 同一任务可以并行交给两个智能体对比方案（场景见架构文档 §3.2）
 

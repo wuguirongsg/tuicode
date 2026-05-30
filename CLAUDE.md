@@ -1,7 +1,7 @@
 # TuiCode — Agent 工作规范
 
 > 只写"读代码 / 读 README / 读架构文档发现不了"的信息。Session 行为由 Hook 强制执行。
-> 完整产品方向见 [.harness/product/backlog.md](.harness/product/backlog.md)，技术架构见 [docs/agentdeck_architecture.md](docs/agentdeck_architecture.md)。
+> 完整产品方向见 [.harness/product/backlog.md](.harness/product/backlog.md)，技术架构见 [docs/tuicode_architecture.md](docs/tuicode_architecture.md)。
 
 ## 不可推翻的约束
 
@@ -37,4 +37,4 @@
 - [.harness/state/current-sprint.md](.harness/state/current-sprint.md) — 当前阶段目标
 - [.harness/state/features.json](.harness/state/features.json) — 功能完成合约
 - [.harness/registry/_index.md](.harness/registry/_index.md) — 决策索引
-- [docs/agentdeck_architecture.md](docs/agentdeck_architecture.md) — 架构设计文档（权威）
+- [docs/tuicode_architecture.md](docs/tuicode_architecture.md) — 架构设计文档（权威）

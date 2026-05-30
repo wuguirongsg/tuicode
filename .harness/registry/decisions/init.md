@@ -7,13 +7,13 @@
 
 ## 项目概况
 
-- **项目名**：AgentDeck（仓库目录名 `tuicode` 是早期占位，以设计文档为准）
+- **项目名**：TuiCode（仓库目录名 `tuicode` 是早期占位，以设计文档为准）
 - **定位**：为终端编程智能体（Claude Code / Codex / Aider）设计的统一 TUI 工作台
 - **技术栈**：Python 3.11+ + Textual 0.60+ + pyte + ptyprocess + pygit2 + watchdog
 - **目录现状**：
-  - `docs/agentdeck_architecture.md` — 架构设计文档 v0.2（权威）
+  - `docs/tuicode_architecture.md` — 架构设计文档 v0.2（权威）
   - `demo/tui_demo.py` — Phase 0 技术 spike（PTY + pyte + Textual 集成验证）
-  - `src/` 尚不存在，MVP 在 `src/agentdeck/` 下新建
+  - `src/` 尚不存在，MVP 在 `src/tuicode/` 下新建
   - `.harness/` 模板已就位
 - **当前阶段**：Phase 1 MVP 启动
 
@@ -73,7 +73,7 @@ Phase 1 MVP — 12 条 feat（粒度按用户确认细化），完整定义见 [
 - 浮窗系（003 → 004、006、008）建立在 001 上
 - 工作流闭环：010 = 008 + 009 + 002；012 = 010 + 006
 
-**完成判据**：在 AgentDeck 中用 Claude Code 编辑一个 Python 项目，跑通 read / write / run_command + 审批全流程。
+**完成判据**：在 TuiCode 中用 Claude Code 编辑一个 Python 项目，跑通 read / write / run_command + 审批全流程。
 
 ---
 
@@ -88,5 +88,5 @@ Phase 1 MVP — 12 条 feat（粒度按用户确认细化），完整定义见 [
 
 用户实际回答的两件事（设计文档未明说）：
 
-- `demo/tui_demo.py` 处置：保留作技术 spike 参考，MVP 在 `src/agentdeck/` 新建
+- `demo/tui_demo.py` 处置：保留作技术 spike 参考，MVP 在 `src/tuicode/` 新建
 - features 粒度：选"更细颗粒（约 10-12 条）"
