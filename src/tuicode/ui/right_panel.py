@@ -7,7 +7,7 @@ from textual.app import ComposeResult
 from textual import events
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import DirectoryTree, Input, Static
+from textual.widgets import DirectoryTree, Input, Label, ListItem, ListView, Static
 
 from tuicode.bus import default_bus
 from tuicode.events import FileModified, GitStatusChanged
@@ -15,6 +15,27 @@ from tuicode.git_status import GitError, GitOps
 from tuicode.i18n import t
 from tuicode.ui.file_tree import FileTree
 from tuicode.ui.mascot import MascotPanel
+
+
+def _status_markup(xy: str) -> str:
+    """Map 2-char git status code to a coloured Rich markup indicator."""
+    x = xy[0] if xy else "?"
+    y = xy[1] if len(xy) > 1 else " "
+    if xy == "??":
+        return "[dim]?[/dim]"
+    if x == "R":
+        return "[cyan]R[/cyan]"
+    if x == "A":
+        return "[green]A[/green]"
+    if x == "D" or y == "D":
+        return "[red]D[/red]"
+    if x == "M" and y == "M":
+        return "[yellow]±[/yellow]"
+    if x == "M":
+        return "[green]M[/green]"
+    if y == "M":
+        return "[yellow]M[/yellow]"
+    return "[dim]?[/dim]"
 
 
 class GitFileList(Widget):
@@ -37,13 +58,25 @@ class GitFileList(Widget):
     DEFAULT_CSS = """
     GitFileList {
         height: auto;
-        max-height: 7;
-        padding: 0 1;
-        color: $text-muted;
-        background: $panel;
+        max-height: 10;
+        background: $surface;
     }
-    GitFileList:focus {
-        color: $text;
+    GitFileList ListView {
+        height: auto;
+        max-height: 10;
+        background: $surface;
+        padding: 0;
+    }
+    GitFileList ListView > ListItem {
+        padding: 0 1;
+        height: 1;
+        background: $surface;
+    }
+    GitFileList ListView > ListItem.--highlight {
+        background: $accent 15%;
+    }
+    GitFileList ListView:focus > ListItem.--highlight {
+        background: $accent 30%;
     }
     """
 
@@ -52,33 +85,43 @@ class GitFileList(Widget):
         self._lines: tuple[str, ...] = ()
         self._selected_index = 0
 
+    def compose(self) -> ComposeResult:
+        lv = ListView()
+        lv.can_focus = False
+        yield lv
+
     def update_files(self, lines: tuple[str, ...]) -> None:
         self._lines = lines
-        if not lines:
-            self._selected_index = 0
-        else:
-            self._selected_index = min(self._selected_index, len(lines) - 1)
-        self.refresh()
+        self._selected_index = 0
+        lv = self.query_one(ListView)
+        lv.clear()
+        for line in lines[:20]:
+            if len(line) < 3:
+                continue
+            xy = line[:2]
+            path_str = line[3:].strip()
+            if " -> " in path_str:
+                path_str = path_str.rsplit(" -> ", 1)[1]
+            filename = Path(path_str.strip('"')).name
+            lv.append(ListItem(Label(f"{_status_markup(xy)}  {filename}"), name=line))
+        # lv.append schedules async mount; sync index after items are mounted
+        if lines:
+            self.call_later(self._sync_lv_index)
 
-    def render(self) -> str:
-        if not self._lines:
-            return ""
-        rendered: list[str] = []
-        for index, line in enumerate(self._lines[:7]):
-            marker = ">" if index == self._selected_index else " "
-            rendered.append(f"{marker} {line}")
-        return "\n".join(rendered)
+    def _sync_lv_index(self) -> None:
+        if self._lines:
+            self.query_one(ListView).index = self._selected_index
 
     def on_key(self, event: events.Key) -> None:
         if not self._lines:
             return
         if event.key in {"down", "j"}:
             self._selected_index = min(self._selected_index + 1, len(self._lines) - 1)
-            self.refresh()
+            self.query_one(ListView).index = self._selected_index
             event.stop()
         elif event.key in {"up", "k"}:
             self._selected_index = max(self._selected_index - 1, 0)
-            self.refresh()
+            self.query_one(ListView).index = self._selected_index
             event.stop()
         elif event.key == "enter":
             self.post_message(self.Selected(self._lines[self._selected_index]))
@@ -90,14 +133,11 @@ class GitFileList(Widget):
             self.post_message(self.StageRequested(self._lines[self._selected_index], "unstage"))
             event.stop()
 
-    def on_click(self, event: events.Click) -> None:
-        if not self._lines:
-            return
-        if 0 <= event.y < min(len(self._lines), 7):
-            self._selected_index = event.y
-            self.refresh()
-            self.post_message(self.Selected(self._lines[self._selected_index]))
-            event.stop()
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        event.stop()
+        name = event.item.name
+        if name:
+            self.post_message(self.Selected(name))
 
 
 class CommitBar(Widget):
@@ -202,8 +242,7 @@ class RightPanel(Widget):
         background: $surface;
     }
     RightPanel #git-status {
-        height: auto;
-        max-height: 4;
+        height: 1;
         padding: 0 1;
         color: $text-muted;
         background: $panel;
