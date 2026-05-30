@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tuicode.agent_memory import AgentSessionStore, strip_terminal_output
+from tuicode.agent_memory import (
+    AgentSessionRecord,
+    AgentSessionStore,
+    session_brief,
+    session_detail,
+    strip_terminal_output,
+)
 
 
 def test_store_persists_session_and_transcript(tmp_path: Path):
@@ -84,3 +90,41 @@ def test_strip_terminal_output_removes_ansi_and_carriage_returns():
     assert strip_terminal_output("\x1b[31merror\x1b[0m\r\nnext\rline") == (
         "error\nnext\nline"
     )
+
+
+def test_session_brief_prefers_meaningful_content():
+    record = AgentSessionRecord(
+        session_id="abc123ef",
+        project_root="/tmp/project",
+        title="Claude Code",
+        agent_type="claude",
+        command="claude",
+        created_at="2026-05-30T00:00:00+00:00",
+        updated_at="2026-05-30T00:01:00+00:00",
+        summary="记录了 Claude Code 的 PTY 会话输出；\n目标：实现会话详情预览",
+        last_output="普通输出",
+    )
+
+    assert session_brief(record) == "目标：实现会话详情预览"
+
+
+def test_session_detail_contains_review_context():
+    record = AgentSessionRecord(
+        session_id="abc123ef",
+        project_root="/tmp/project",
+        title="Codex",
+        agent_type="codex",
+        command="codex",
+        created_at="2026-05-30T00:00:00+00:00",
+        updated_at="2026-05-30T00:01:00+00:00",
+        status="ended",
+        transcript_path="/tmp/transcript.txt",
+        summary="摘要内容",
+        last_output="最近输出",
+    )
+
+    detail = session_detail(record)
+    assert "会话：Codex (codex)" in detail
+    assert "摘要内容" in detail
+    assert "最近输出" in detail
+    assert "/tmp/transcript.txt" in detail

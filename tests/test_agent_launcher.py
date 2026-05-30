@@ -140,7 +140,7 @@ class TestNewAgentModal:
 
 
 class TestAgentSessionHistoryModal:
-    def test_select_history_session(self):
+    def test_review_then_continue_history_session(self):
         received: list[AgentSessionRecord | None] = []
         record = AgentSessionRecord(
             session_id="abc123ef",
@@ -151,6 +151,8 @@ class TestAgentSessionHistoryModal:
             created_at="2026-05-30T00:00:00+00:00",
             updated_at="2026-05-30T00:01:00+00:00",
             status="ended",
+            summary="目标：优化历史会话列表",
+            last_output="recent output",
         )
 
         async def run():
@@ -166,6 +168,45 @@ class TestAgentSessionHistoryModal:
                 await pilot.pause()
                 await pilot.click("#session-0")
                 await pilot.pause()
+                assert received == []
+                await pilot.click("#detail-continue")
+                await pilot.pause()
 
         asyncio.run(run())
         assert received == [record]
+
+    def test_back_from_detail_keeps_history_modal_open(self):
+        received: list[AgentSessionRecord | None] = []
+        record = AgentSessionRecord(
+            session_id="abc123ef",
+            project_root="/tmp/project",
+            title="Claude Code",
+            agent_type="claude",
+            command="claude",
+            created_at="2026-05-30T00:00:00+00:00",
+            updated_at="2026-05-30T00:01:00+00:00",
+            status="ended",
+            summary="任务：先看详情",
+        )
+
+        async def run():
+            class _App(App):
+                CSS = "Screen { background: #000; }"
+
+                async def on_mount(self) -> None:
+                    await self.push_screen(
+                        AgentSessionHistoryModal([record]), received.append
+                    )
+
+            async with _App().run_test(headless=True) as pilot:
+                await pilot.pause()
+                await pilot.click("#session-0")
+                await pilot.pause()
+                await pilot.click("#detail-back")
+                await pilot.pause()
+                assert received == []
+                await pilot.click("#history-cancel")
+                await pilot.pause()
+
+        asyncio.run(run())
+        assert received == [None]

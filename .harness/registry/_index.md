@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-30 22:30] FIX 历史 Agent 会话选择体验：列表显示摘要描述，点击先查看详情，详情页确认后才继续，232 tests passed
+
 [2026-05-30 22:15] FIX 继续历史 Agent 会话输入卡住：完整上下文改写入 handoff 文件，PTY 只自动提交一行短提示并绕开 bracketed paste，229 tests passed
 
 [2026-05-30 21:50] DONE Agent 会话记忆与跨 Agent 接续：保存 PTY transcript/摘要，命令面板可选历史会话并用任意 Agent 继续 → sessions/2026-05-30-2150.md

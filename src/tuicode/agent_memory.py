@@ -17,6 +17,7 @@ import re
 
 _ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 _MAX_TAIL_CHARS = 6000
+_IGNORE_LINE_PREFIXES = ("记录了 ", "以下是", "```", "╭", "╰", "│", "─")
 
 
 @dataclass
@@ -54,6 +55,57 @@ def strip_terminal_output(text: str) -> str:
     """Remove common terminal control sequences before writing memory files."""
     text = _ANSI_RE.sub("", text)
     return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def session_brief(record: AgentSessionRecord, max_len: int = 46) -> str:
+    """Return a human-readable description for a saved Agent session."""
+    candidates = _meaningful_lines(record.summary) + _meaningful_lines(record.last_output)
+    if not candidates:
+        return "暂无摘要"
+
+    preferred = (
+        "目标", "需求", "任务", "实现", "修复", "问题", "方案",
+        "待办", "TODO", "todo", "fix", "feat",
+    )
+    for line in candidates:
+        if any(token in line for token in preferred):
+            return _clip(line, max_len)
+    return _clip(candidates[0], max_len)
+
+
+def session_detail(record: AgentSessionRecord, output_chars: int = 1600) -> str:
+    """Build a compact detail view for review before continuing."""
+    summary = record.summary.strip() or "暂无自动摘要"
+    tail = record.last_output.strip()[-output_chars:] or "暂无最近输出"
+    return (
+        f"会话：{record.title} ({record.agent_type})\n"
+        f"状态：{record.status}\n"
+        f"更新时间：{record.updated_at}\n"
+        f"命令：{record.command}\n"
+        f"Transcript：{record.transcript_path or '暂无'}\n\n"
+        f"摘要：\n{summary}\n\n"
+        f"最近输出：\n{tail}"
+    )
+
+
+def _meaningful_lines(text: str) -> list[str]:
+    lines: list[str] = []
+    for raw in strip_terminal_output(text).splitlines():
+        line = re.sub(r"\s+", " ", raw).strip()
+        if len(line) < 4:
+            continue
+        if line.startswith(_IGNORE_LINE_PREFIXES):
+            continue
+        if all(ch in "-_=*#~·. " for ch in line):
+            continue
+        lines.append(line)
+    return lines
+
+
+def _clip(text: str, max_len: int) -> str:
+    if len(text) <= max_len:
+        return text
+    return text[: max_len - 1].rstrip() + "…"
 
 
 class AgentSessionStore:
