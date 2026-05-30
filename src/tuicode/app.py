@@ -11,7 +11,7 @@ from tuicode.bus import default_bus
 from tuicode.events import FileModified
 from tuicode.git_diff import GitDiffService
 from tuicode.git_status import GitStatusPoller
-from tuicode.i18n import t
+from tuicode.i18n import get_lang, save_lang, t
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
 from tuicode.ui.command_palette_modal import CommandPaletteModal, PaletteCommand
 from tuicode.ui.new_agent_modal import AgentConfig, NewAgentModal
@@ -256,6 +256,20 @@ class TuiCodeApp(App):
             idx = -1
         self.theme = self._THEME_CYCLE[(idx + 1) % len(self._THEME_CYCLE)]
 
+    # ── 语言切换 ──────────────────────────────────────────────────────────────
+
+    def action_switch_language(self) -> None:
+        current = get_lang()
+        new_lang = "en" if current == "zh" else "zh"
+        save_lang(new_lang)
+        label = "English" if new_lang == "en" else "中文"
+        self.notify(
+            f"界面语言已切换为 {label}，重启后完全生效\n"
+            f"配置文件：~/.config/tuicode/settings.toml",
+            title="语言 / Language",
+            timeout=5,
+        )
+
     # ── 命令面板 Ctrl+/ / F1 ──────────────────────────────────────────────────
 
     def action_command_palette(self) -> None:
@@ -263,12 +277,21 @@ class TuiCodeApp(App):
         self.push_screen(CommandPaletteModal(commands))
 
     def _build_palette_commands(self) -> list[PaletteCommand]:
+        _lang_names = {"zh": "中文", "en": "English"}
+        _cur_lang = get_lang()
+        _next_lang = "en" if _cur_lang == "zh" else "zh"
         return [
             PaletteCommand(
                 name="切换主题",
                 description=f"当前：{self.theme}，循环切换配色方案",
                 callback=self.action_toggle_theme,
                 keywords=["theme", "color", "主题", "配色", "dark", "light"],
+            ),
+            PaletteCommand(
+                name=f"切换界面语言 → {_lang_names[_next_lang]}",
+                description=f"当前：{_lang_names[_cur_lang]}，保存到 ~/.config/tuicode/settings.toml，重启生效",
+                callback=self.action_switch_language,
+                keywords=["language", "lang", "语言", "中文", "english", "en", "zh"],
             ),
             PaletteCommand(
                 name="新建 Agent 会话",
