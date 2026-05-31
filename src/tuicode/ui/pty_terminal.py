@@ -428,6 +428,20 @@ class PtyTerminal(Widget):
         if event.key == "ctrl+c":
             # 计数交给 App（全局双击退出）；\x03 仍照常透传给子进程中断 agent
             self.app._ctrl_c_pressed()
+        if event.key == "ctrl+v":
+            # 从系统剪贴板粘贴，而非发 \x16（verbatim 字符）
+            from tuicode.clipboard import read as _clipboard_read
+            text = _clipboard_read()
+            if text:
+                event.stop()
+                try:
+                    data = text.encode("utf-8")
+                    if self._bracketed_paste:
+                        data = b"\x1b[200~" + data + b"\x1b[201~"
+                    os.write(self._master_fd, data)
+                except OSError:
+                    pass
+            return
         data = self._key_to_bytes(event)
         if data:
             event.stop()

@@ -8,6 +8,7 @@ from textual.timer import Timer
 from textual.widget import Widget
 
 from tuicode import __version__
+from tuicode import clipboard as _clipboard_sys
 from tuicode.agent_memory import AgentSessionStore
 from tuicode.bus import default_bus
 from tuicode.events import FileModified, TerminalOutput
@@ -220,6 +221,17 @@ class TuiCodeApp(App):
         is_filetree = isinstance(event.widget, FileTree)
         hint = t("status.filetree_hint") if is_filetree else None
         self.query_one(StatusBar).set_shortcuts(hint)
+
+    # ── 系统剪贴板 (override Textual 内部剪贴板) ──────────────────────────────
+
+    @property
+    def clipboard(self) -> str:
+        text = _clipboard_sys.read()
+        return text if text else self._clipboard
+
+    def copy_to_clipboard(self, text: str) -> None:
+        self._clipboard = text
+        _clipboard_sys.write(text)
 
     # ── 全局双击 Ctrl+C 退出 ──────────────────────────────────────────────────
 
