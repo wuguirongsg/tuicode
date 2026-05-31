@@ -15,6 +15,8 @@ from tuicode.ui.new_agent_modal import (
     _AgentGrid,
     _PRESETS,
     detect_installed_agents,
+    load_cached_agents,
+    save_cached_agents,
 )
 from tuicode.agent_memory import AgentSessionRecord
 
@@ -73,13 +75,31 @@ class TestNewAgentModal:
         detected = detect_installed_agents()
         assert [agent.agent_type for agent in detected] == ["codex"]
 
-    def test_initial_agent_grid_is_empty_before_detection(self):
+    def test_cached_agents_round_trip(self, tmp_path):
+        cache_path = tmp_path / "agents.json"
+        agents = [
+            AgentOption("Codex", "codex", "codex"),
+            AgentOption("myagent", "myagent --flag", "custom", "custom"),
+        ]
+
+        save_cached_agents(agents, cache_path)
+        loaded, exists = load_cached_agents(cache_path)
+
+        assert exists is True
+        assert loaded == agents
+
+    def test_initial_agent_grid_is_empty_before_detection(self, tmp_path):
         async def run():
             class _App(App):
                 CSS = "Screen { background: #000; }"
 
                 async def on_mount(self) -> None:
-                    await self.push_screen(NewAgentModal(detector=lambda: []))
+                    await self.push_screen(
+                        NewAgentModal(
+                            detector=lambda: [],
+                            cache_path=tmp_path / "missing.json",
+                        )
+                    )
 
             app = _App()
             async with app.run_test(headless=True) as pilot:
@@ -90,8 +110,10 @@ class TestNewAgentModal:
 
         asyncio.run(run())
 
-    def test_detect_button_populates_agent_grid(self):
+    def test_cached_agents_load_on_open(self, tmp_path):
         option = AgentOption("Codex", "codex", "codex")
+        cache_path = tmp_path / "agents.json"
+        save_cached_agents([option], cache_path)
 
         async def run():
             class _App(App):
@@ -99,7 +121,35 @@ class TestNewAgentModal:
 
                 async def on_mount(self) -> None:
                     await self.push_screen(
-                        NewAgentModal(detector=lambda: [option])
+                        NewAgentModal(
+                            detector=lambda: [],
+                            cache_path=cache_path,
+                        )
+                    )
+
+            app = _App()
+            async with app.run_test(headless=True) as pilot:
+                await pilot.pause()
+                grid = app.screen_stack[-1].query_one(_AgentGrid)
+                assert grid._options == [option]
+                assert grid.scanned is True
+
+        asyncio.run(run())
+
+    def test_detect_button_populates_agent_grid_and_updates_cache(self, tmp_path):
+        option = AgentOption("Codex", "codex", "codex")
+        cache_path = tmp_path / "agents.json"
+
+        async def run():
+            class _App(App):
+                CSS = "Screen { background: #000; }"
+
+                async def on_mount(self) -> None:
+                    await self.push_screen(
+                        NewAgentModal(
+                            detector=lambda: [option],
+                            cache_path=cache_path,
+                        )
                     )
 
             app = _App()
@@ -112,12 +162,16 @@ class TestNewAgentModal:
                 assert grid.scanned is True
 
         asyncio.run(run())
+        loaded, exists = load_cached_agents(cache_path)
+        assert exists is True
+        assert loaded == [option]
 
-    def test_preset_dismiss_on_button(self):
+    def test_preset_dismiss_on_button(self, tmp_path):
         """检测后启动选中 Agent 应 dismiss 并返回 AgentConfig。"""
         received: list[AgentConfig | None] = []
         label, command, agent_type = _PRESETS[0]
         option = AgentOption(label, command, agent_type)
+        cache_path = tmp_path / "agents.json"
 
         async def run():
             class _App(App):
@@ -125,7 +179,11 @@ class TestNewAgentModal:
 
                 async def on_mount(self) -> None:
                     await self.push_screen(
-                        NewAgentModal(detector=lambda: [option]), received.append
+                        NewAgentModal(
+                            detector=lambda: [option],
+                            cache_path=cache_path,
+                        ),
+                        received.append,
                     )
 
             async with _App().run_test(headless=True) as pilot:
@@ -142,16 +200,19 @@ class TestNewAgentModal:
         assert result.agent_type == agent_type
         assert result.command == command
 
-    def test_cancel_button_dismisses_none(self):
+    def test_cancel_button_dismisses_none(self, tmp_path):
         """点击取消应 dismiss None。"""
         received: list[AgentConfig | None] = []
+        cache_path = tmp_path / "agents.json"
 
         async def run():
             class _App(App):
                 CSS = "Screen { background: #000; }"
 
                 async def on_mount(self) -> None:
-                    await self.push_screen(NewAgentModal(), received.append)
+                    await self.push_screen(
+                        NewAgentModal(cache_path=cache_path), received.append
+                    )
 
             async with _App().run_test(headless=True) as pilot:
                 await pilot.pause()
@@ -161,16 +222,19 @@ class TestNewAgentModal:
         asyncio.run(run())
         assert received == [None]
 
-    def test_escape_dismisses_none(self):
+    def test_escape_dismisses_none(self, tmp_path):
         """Escape 键应 dismiss None。"""
         received: list[AgentConfig | None] = []
+        cache_path = tmp_path / "agents.json"
 
         async def run():
             class _App(App):
                 CSS = "Screen { background: #000; }"
 
                 async def on_mount(self) -> None:
-                    await self.push_screen(NewAgentModal(), received.append)
+                    await self.push_screen(
+                        NewAgentModal(cache_path=cache_path), received.append
+                    )
 
             async with _App().run_test(headless=True) as pilot:
                 await pilot.pause()
@@ -180,16 +244,19 @@ class TestNewAgentModal:
         asyncio.run(run())
         assert received == [None]
 
-    def test_custom_command_ok(self):
+    def test_custom_command_ok(self, tmp_path):
         """自定义命令 + 点击启动应返回 custom AgentConfig。"""
         received: list[AgentConfig | None] = []
+        cache_path = tmp_path / "agents.json"
 
         async def run():
             class _App(App):
                 CSS = "Screen { background: #000; }"
 
                 async def on_mount(self) -> None:
-                    await self.push_screen(NewAgentModal(), received.append)
+                    await self.push_screen(
+                        NewAgentModal(cache_path=cache_path), received.append
+                    )
 
             async with _App().run_test(headless=True) as pilot:
                 await pilot.pause()
@@ -204,16 +271,27 @@ class TestNewAgentModal:
         assert result is not None
         assert result.command == "myagent --flag"
         assert result.agent_type == "custom"
+        loaded, exists = load_cached_agents(cache_path)
+        assert exists is True
+        assert loaded == [
+            AgentOption("myagent", "myagent --flag", "custom", "custom")
+        ]
 
-    def test_custom_command_can_be_added_to_agent_grid(self):
+    def test_custom_command_can_be_added_to_agent_grid(self, tmp_path):
         """自定义命令可加入与检测结果相同的三列 Agent 列表。"""
+        cache_path = tmp_path / "agents.json"
 
         async def run():
             class _App(App):
                 CSS = "Screen { background: #000; }"
 
                 async def on_mount(self) -> None:
-                    await self.push_screen(NewAgentModal(detector=lambda: []))
+                    await self.push_screen(
+                        NewAgentModal(
+                            detector=lambda: [],
+                            cache_path=cache_path,
+                        )
+                    )
 
             app = _App()
             async with app.run_test(headless=True) as pilot:
@@ -228,6 +306,11 @@ class TestNewAgentModal:
                 assert grid._options[0].source == "custom"
 
         asyncio.run(run())
+        loaded, exists = load_cached_agents(cache_path)
+        assert exists is True
+        assert loaded == [
+            AgentOption("myagent", "myagent --flag", "custom", "custom")
+        ]
 
 
 class TestAgentSessionHistoryModal:

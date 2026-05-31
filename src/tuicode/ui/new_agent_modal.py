@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import shlex
 import shutil
@@ -39,6 +40,10 @@ class AgentOption:
     command: str
     agent_type: str
     source: str = "detected"
+
+
+def _default_agent_cache_path() -> Path:
+    return Path.home() / ".config" / "tuicode" / "agents.json"
 
 
 _PRESETS: list[tuple[str, str, str]] = [
@@ -122,6 +127,68 @@ def detect_installed_agents() -> list[AgentOption]:
     return detected
 
 
+def load_cached_agents(path: Path | None = None) -> tuple[list[AgentOption], bool]:
+    """Load cached launcher agents.
+
+    Returns ``(agents, cache_exists)`` so an empty cached scan can still render
+    the "no local agents" state instead of the first-run hint.
+    """
+
+    cache_path = path or _default_agent_cache_path()
+    if not cache_path.exists():
+        return [], False
+    try:
+        data = json.loads(cache_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return [], False
+    if not isinstance(data, dict):
+        return [], False
+    raw_agents = data.get("agents", [])
+    if not isinstance(raw_agents, list):
+        return [], True
+
+    agents: list[AgentOption] = []
+    for raw in raw_agents:
+        if not isinstance(raw, dict):
+            continue
+        label = raw.get("label")
+        command = raw.get("command")
+        agent_type = raw.get("agent_type")
+        source = raw.get("source", "detected")
+        if not all(
+            isinstance(item, str) and item
+            for item in (label, command, agent_type)
+        ):
+            continue
+        agents.append(
+            AgentOption(
+                label,
+                command,
+                agent_type,
+                source if isinstance(source, str) else "detected",
+            )
+        )
+    return agents, True
+
+
+def save_cached_agents(agents: list[AgentOption], path: Path | None = None) -> None:
+    cache_path = path or _default_agent_cache_path()
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "version": 1,
+        "agents": [
+            {
+                "label": agent.label,
+                "command": agent.command,
+                "agent_type": agent.agent_type,
+                "source": agent.source,
+            }
+            for agent in agents
+        ],
+    }
+    cache_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+
+
 class _AgentGrid(Widget):
     """Three-column selectable agent card grid."""
 
@@ -156,11 +223,17 @@ class _AgentGrid(Widget):
     }
     """
 
-    def __init__(self, options: list[AgentOption], **kwargs) -> None:
+    def __init__(
+        self,
+        options: list[AgentOption],
+        *,
+        scanned: bool = False,
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         self._options = options
         self.selected_index = 0
-        self.scanned = False
+        self.scanned = scanned
 
     def update_options(
         self,
@@ -367,18 +440,24 @@ class NewAgentModal(ModalScreen[AgentConfig | None]):
         self,
         *,
         detector: Callable[[], list[AgentOption]] = detect_installed_agents,
+        cache_path: Path | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._detector = detector
-        self._options: list[AgentOption] = []
+        self._cache_path = cache_path or _default_agent_cache_path()
+        self._options, self._cache_loaded = load_cached_agents(self._cache_path)
 
     def compose(self) -> ComposeResult:
         with Widget(id="modal-box"):
             yield Label(t("agent.modal_title"), id="modal-title")
             with VerticalScroll(id="agent-grid-scroll"):
-                yield _AgentGrid(self._options, id="agent-grid")
-            yield Button(t("agent.btn_detect"), id="btn-detect")
+                yield _AgentGrid(
+                    self._options,
+                    scanned=self._cache_loaded,
+                    id="agent-grid",
+                )
+            yield Button(self._detect_button_label(), id="btn-detect")
             yield Label(t("agent.custom_label"), id="custom-label")
             yield Input(placeholder="e.g. opencode / python agent.py", id="custom-input")
             with Widget(id="btn-row"):
@@ -399,7 +478,10 @@ class NewAgentModal(ModalScreen[AgentConfig | None]):
 
         if btn_id == "btn-detect":
             self._options = self._detector()
+            save_cached_agents(self._options, self._cache_path)
+            self._cache_loaded = True
             self.query_one(_AgentGrid).update_options(self._options, scanned=True)
+            event.button.label = self._detect_button_label()
             return
 
         if btn_id == "btn-add-custom":
@@ -463,11 +545,16 @@ class NewAgentModal(ModalScreen[AgentConfig | None]):
             if not (item.source == "custom" and item.command == command)
         ]
         self._options.append(option)
+        save_cached_agents(self._options, self._cache_path)
+        self._cache_loaded = True
         grid = self.query_one(_AgentGrid)
         grid.update_options(self._options)
         grid.selected_index = len(self._options) - 1
         grid.refresh()
         return option
+
+    def _detect_button_label(self) -> str:
+        return t("agent.btn_redetect") if self._cache_loaded else t("agent.btn_detect")
 
     def _launch(self, option: AgentOption) -> None:
         self.dismiss(

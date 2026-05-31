@@ -89,6 +89,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     "agent.source_detected": {"zh": "本地已安装", "en": "installed locally"},
     "agent.source_custom": {"zh": "自定义 Agent", "en": "custom agent"},
     "agent.btn_detect":   {"zh": "检测本地 Agent", "en": "Detect Local Agents"},
+    "agent.btn_redetect": {"zh": "重新检测本地 Agent", "en": "Rescan Local Agents"},
     "agent.btn_add_custom": {"zh": "加入列表", "en": "Add to List"},
     "agent.btn_start":    {"zh": "启动",            "en": "Start"},
     "agent.btn_cancel":   {"zh": "取消",            "en": "Cancel"},
