@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 
+from rich.cells import cell_len
 from textual.app import App, ComposeResult
 
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
@@ -274,6 +275,24 @@ class TestAgentSessionHistoryModal:
         assert top.startswith("╭") and top.endswith("╮")
         assert title.startswith("│ ") and title.endswith("│")
         assert bottom.startswith("╰") and bottom.endswith("╯")
+
+    def test_grid_card_lines_fit_cell_width_with_cjk(self):
+        record = AgentSessionRecord(
+            session_id="abc123ef",
+            project_root="/tmp/project",
+            title="Claude Code",
+            agent_type="claude",
+            command="claude",
+            created_at="2026-05-30T00:00:00+00:00",
+            updated_at="2026-05-30T00:01:00+00:00",
+            status="ended",
+            summary="任务：很长很长很长的中文标题会挤出边框",
+        )
+        grid = _SessionGrid([record])
+
+        for line in range(grid.CARD_H):
+            text, _ = grid._card_line(record, 0, line, 24)
+            assert cell_len(text) == 24
 
     def test_delete_from_detail_refreshes_history_grid(self):
         received: list[AgentSessionRecord | None] = []

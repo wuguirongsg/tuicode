@@ -13,6 +13,7 @@ from textual.strip import Strip
 from textual.widget import Widget
 from textual.widgets import Button, Label, Static
 
+from rich.cells import cell_len, set_cell_size
 from rich.segment import Segment
 from rich.style import Style
 
@@ -385,6 +386,8 @@ class AgentSessionHistoryModal(ModalScreen[AgentSessionRecord | None]):
 
 
 def _fit(text: str, width: int) -> str:
-    if len(text) > width:
-        text = text[: max(0, width - 1)].rstrip() + "…"
-    return text.ljust(width)
+    if width <= 0:
+        return ""
+    if cell_len(text) > width:
+        text = set_cell_size(text, max(0, width - 1)).rstrip() + "…"
+    return set_cell_size(text, width)
