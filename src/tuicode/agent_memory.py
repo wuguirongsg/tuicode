@@ -124,6 +124,16 @@ def session_brief(record: AgentSessionRecord, max_len: int = 46) -> str:
     return f"{record.title} 会话"
 
 
+def session_description(record: AgentSessionRecord, max_len: int = 64) -> str:
+    """Return a second-line description for a session card."""
+    brief = session_brief(record, max_len=200)
+    lines = _display_lines(record.summary, limit=6) + _display_lines(record.last_output, limit=8)
+    for line in lines:
+        if line != brief:
+            return _clip(line, max_len)
+    return _clip(f"{record.title} · {record.status}", max_len)
+
+
 def session_detail(record: AgentSessionRecord, output_chars: int = 1600) -> str:
     """Build a compact detail view for review before continuing."""
     updated = record.updated_at.replace("T", " ")[:19]
@@ -229,6 +239,25 @@ class AgentSessionStore:
 
     def get(self, session_id: str) -> AgentSessionRecord | None:
         return self._load_records().get(session_id)
+
+    def delete_session(self, session_id: str) -> bool:
+        """Delete one saved session and its local memory artifacts."""
+        records = self._load_records()
+        record = records.pop(session_id, None)
+        if record is None:
+            return False
+        for path in (
+            Path(record.transcript_path) if record.transcript_path else None,
+            self.handoffs_dir / f"{session_id}.md",
+        ):
+            if path is None:
+                continue
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        self._save_records(records)
+        return True
 
     def start_session(
         self,

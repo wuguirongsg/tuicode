@@ -36,6 +36,26 @@ def test_store_persists_session_and_transcript(tmp_path: Path):
     assert "changed src/app.py" in Path(loaded.transcript_path).read_text()
 
 
+def test_delete_session_removes_record_and_artifacts(tmp_path: Path):
+    store = AgentSessionStore(project_root=tmp_path / "repo", data_home=tmp_path / "data")
+    store.start_session(
+        session_id="abc123ef",
+        title="Claude Code",
+        agent_type="claude",
+        command="claude",
+    )
+    store.append_output("abc123ef", "目标：删除历史会话\n")
+    store.write_continuation_handoff("abc123ef")
+    transcript = Path(store.get("abc123ef").transcript_path)
+    handoff = store.handoffs_dir / "abc123ef.md"
+
+    assert store.delete_session("abc123ef") is True
+
+    assert store.get("abc123ef") is None
+    assert not transcript.exists()
+    assert not handoff.exists()
+
+
 def test_build_continuation_prompt_is_agent_agnostic(tmp_path: Path):
     store = AgentSessionStore(project_root=tmp_path, data_home=tmp_path / "data")
     store.start_session(

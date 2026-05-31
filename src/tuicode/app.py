@@ -288,7 +288,10 @@ class TuiCodeApp(App):
     @work
     async def action_continue_agent_session(self) -> None:
         record = await self.push_screen(
-            AgentSessionHistoryModal(self._agent_session_store.list_sessions(limit=20)),
+            AgentSessionHistoryModal(
+                self._agent_session_store.list_sessions(limit=20),
+                on_delete=self._agent_session_store.delete_session,
+            ),
             wait_for_dismiss=True,
         )
         if record is None:

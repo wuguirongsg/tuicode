@@ -6,7 +6,7 @@ import asyncio
 from textual.app import App, ComposeResult
 
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
-from tuicode.ui.agent_session_modal import AgentSessionHistoryModal
+from tuicode.ui.agent_session_modal import AgentSessionHistoryModal, _SessionGrid
 from tuicode.ui.new_agent_modal import AgentConfig, NewAgentModal, _PRESETS
 from tuicode.agent_memory import AgentSessionRecord
 
@@ -164,9 +164,10 @@ class TestAgentSessionHistoryModal:
                         AgentSessionHistoryModal([record]), received.append
                     )
 
-            async with _App().run_test(headless=True) as pilot:
+            app = _App()
+            async with app.run_test(headless=True) as pilot:
                 await pilot.pause()
-                await pilot.click("#session-0")
+                app.screen_stack[-1].query_one(_SessionGrid).open_selected()
                 await pilot.pause()
                 assert received == []
                 await pilot.click("#detail-continue")
@@ -198,13 +199,96 @@ class TestAgentSessionHistoryModal:
                         AgentSessionHistoryModal([record]), received.append
                     )
 
-            async with _App().run_test(headless=True) as pilot:
+            app = _App()
+            async with app.run_test(headless=True) as pilot:
                 await pilot.pause()
-                await pilot.click("#session-0")
+                app.screen_stack[-1].query_one(_SessionGrid).open_selected()
                 await pilot.pause()
                 await pilot.click("#detail-back")
                 await pilot.pause()
                 assert received == []
+                await pilot.click("#history-cancel")
+                await pilot.pause()
+
+        asyncio.run(run())
+        assert received == [None]
+
+    def test_arrow_keys_move_grid_selection(self):
+        records = [
+            AgentSessionRecord(
+                session_id=f"abc123e{i}",
+                project_root="/tmp/project",
+                title="Claude Code",
+                agent_type="claude",
+                command="claude",
+                created_at="2026-05-30T00:00:00+00:00",
+                updated_at="2026-05-30T00:01:00+00:00",
+                status="ended",
+                summary=f"任务：会话 {i}",
+            )
+            for i in range(6)
+        ]
+
+        async def run():
+            class _App(App):
+                CSS = "Screen { background: #000; }"
+
+                async def on_mount(self) -> None:
+                    await self.push_screen(AgentSessionHistoryModal(records))
+
+            app = _App()
+            async with app.run_test(headless=True) as pilot:
+                await pilot.pause()
+                grid = app.screen_stack[-1].query_one(_SessionGrid)
+                assert grid.selected_index == 0
+                await pilot.press("right")
+                await pilot.pause()
+                assert grid.selected_index == 1
+                await pilot.press("down")
+                await pilot.pause()
+                assert grid.selected_index == 4
+                await pilot.press("left")
+                await pilot.pause()
+                assert grid.selected_index == 3
+
+        asyncio.run(run())
+
+    def test_delete_from_detail_refreshes_history_grid(self):
+        received: list[AgentSessionRecord | None] = []
+        deleted: list[str] = []
+        records = [
+            AgentSessionRecord(
+                session_id="abc123ef",
+                project_root="/tmp/project",
+                title="Claude Code",
+                agent_type="claude",
+                command="claude",
+                created_at="2026-05-30T00:00:00+00:00",
+                updated_at="2026-05-30T00:01:00+00:00",
+                status="ended",
+                summary="任务：删除",
+            )
+        ]
+
+        async def run():
+            class _App(App):
+                CSS = "Screen { background: #000; }"
+
+                async def on_mount(self) -> None:
+                    await self.push_screen(
+                        AgentSessionHistoryModal(records, on_delete=lambda sid: deleted.append(sid) or True),
+                        received.append,
+                    )
+
+            app = _App()
+            async with app.run_test(headless=True) as pilot:
+                await pilot.pause()
+                app.screen_stack[-1].query_one(_SessionGrid).open_selected()
+                await pilot.pause()
+                await pilot.click("#detail-delete")
+                await pilot.pause()
+                assert deleted == ["abc123ef"]
+                assert app.screen_stack[-1].query_one(_SessionGrid)._sessions == []
                 await pilot.click("#history-cancel")
                 await pilot.pause()
 

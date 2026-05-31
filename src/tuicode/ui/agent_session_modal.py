@@ -1,18 +1,34 @@
 """Agent session history picker and review modal."""
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Literal
+
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
+from textual import events
+from textual.message import Message
 from textual.screen import ModalScreen
+from textual.strip import Strip
 from textual.widget import Widget
 from textual.widgets import Button, Label, Static
 
-from tuicode.agent_memory import AgentSessionRecord, session_brief, session_detail
+from rich.segment import Segment
+from rich.style import Style
+
+from tuicode.agent_memory import (
+    AgentSessionRecord,
+    session_brief,
+    session_description,
+    session_detail,
+)
 from tuicode.i18n import t
 
+DetailAction = Literal["continue", "delete", "back"]
 
-class AgentSessionDetailModal(ModalScreen[bool]):
-    """Show a saved session before the user decides to continue it."""
+
+class AgentSessionDetailModal(ModalScreen[DetailAction]):
+    """Show a saved session before the user decides what to do with it."""
 
     DEFAULT_CSS = """
     AgentSessionDetailModal {
@@ -46,6 +62,9 @@ class AgentSessionDetailModal(ModalScreen[bool]):
     AgentSessionDetailModal #detail-continue {
         width: 1fr;
     }
+    AgentSessionDetailModal #detail-delete {
+        width: 1fr;
+    }
     AgentSessionDetailModal #detail-back {
         width: 1fr;
     }
@@ -66,32 +85,183 @@ class AgentSessionDetailModal(ModalScreen[bool]):
                     id="detail-continue",
                     variant="success",
                 )
+                yield Button(
+                    t("agent.btn_delete"),
+                    id="detail-delete",
+                    variant="error",
+                )
                 yield Button(t("agent.btn_back"), id="detail-back")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         event.stop()
         if event.button.id == "detail-continue":
-            self.dismiss(True)
+            self.dismiss("continue")
+        elif event.button.id == "detail-delete":
+            self.dismiss("delete")
         elif event.button.id == "detail-back":
-            self.dismiss(False)
+            self.dismiss("back")
 
     def on_key(self, event) -> None:
         if event.key == "escape":
-            self.dismiss(False)
+            self.dismiss("back")
             event.stop()
+
+
+class _SessionGrid(Widget):
+    """Three-column selectable session card grid."""
+
+    can_focus = True
+    CARD_H = 5
+    COLS = 3
+
+    BINDINGS = [
+        ("left", "move_left", ""),
+        ("right", "move_right", ""),
+        ("up", "move_up", ""),
+        ("down", "move_down", ""),
+        ("enter", "open_selected", ""),
+    ]
+
+    class Selected(Message):
+        def __init__(self, session: AgentSessionRecord) -> None:
+            super().__init__()
+            self.session = session
+
+    DEFAULT_CSS = """
+    _SessionGrid {
+        width: 1fr;
+        height: auto;
+        min-height: 16;
+        background: $surface;
+    }
+    _SessionGrid:focus {
+        background: $surface;
+    }
+    """
+
+    def __init__(self, sessions: list[AgentSessionRecord], **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._sessions = sessions
+        self.selected_index = 0
+
+    def update_sessions(self, sessions: list[AgentSessionRecord]) -> None:
+        self._sessions = sessions
+        if not sessions:
+            self.selected_index = 0
+        else:
+            self.selected_index = min(self.selected_index, len(sessions) - 1)
+        self.refresh(layout=True)
+
+    def move(self, delta: int) -> None:
+        if not self._sessions:
+            return
+        self.selected_index = max(
+            0,
+            min(self.selected_index + delta, len(self._sessions) - 1),
+        )
+        self.refresh()
+
+    def open_selected(self) -> None:
+        if not self._sessions:
+            return
+        self.post_message(self.Selected(self._sessions[self.selected_index]))
+
+    def action_move_left(self) -> None:
+        self.move(-1)
+
+    def action_move_right(self) -> None:
+        self.move(1)
+
+    def action_move_up(self) -> None:
+        self.move(-self.COLS)
+
+    def action_move_down(self) -> None:
+        self.move(self.COLS)
+
+    def action_open_selected(self) -> None:
+        self.open_selected()
+
+    def on_click(self, event: events.Click) -> None:
+        if not self._sessions:
+            return
+        col_w = max(1, self.size.width // self.COLS)
+        col = min(event.x // col_w, self.COLS - 1)
+        row = event.y // self.CARD_H
+        idx = row * self.COLS + col
+        if 0 <= idx < len(self._sessions):
+            self.selected_index = idx
+            self.refresh()
+            self.open_selected()
+            event.stop()
+
+    def render_line(self, y: int) -> Strip:
+        if not self._sessions:
+            return Strip([Segment(t("agent.history_empty"), Style(color="bright_black"))])
+
+        row = y // self.CARD_H
+        line_in_card = y % self.CARD_H
+        col_w = max(24, self.size.width // self.COLS)
+        segments: list[Segment] = []
+        for col in range(self.COLS):
+            idx = row * self.COLS + col
+            if idx >= len(self._sessions):
+                segments.append(Segment(" " * col_w, Style(bgcolor="#101a30")))
+                continue
+            text, style = self._card_line(self._sessions[idx], idx, line_in_card, col_w)
+            segments.append(Segment(text, style))
+        return Strip(segments)
+
+    def _card_line(
+        self,
+        session: AgentSessionRecord,
+        idx: int,
+        line: int,
+        width: int,
+    ) -> tuple[str, Style]:
+        selected = idx == self.selected_index
+        base = Style(
+            color="#001018" if selected else "#c8f4ff",
+            bgcolor="#b8f4ff" if selected else "#101a30",
+            bold=selected,
+        )
+        muted = Style(
+            color="#003342" if selected else "#8aa0b8",
+            bgcolor="#b8f4ff" if selected else "#101a30",
+        )
+        title = session_brief(session, max_len=max(10, width - 4))
+        desc = session_description(session, max_len=max(10, width - 4))
+        meta = (
+            f"{session.updated_at.replace('T', ' ')[:10]} "
+            f"{session.agent_type} {session.status}"
+        )
+        if line == 0:
+            return _fit(f" {title}", width), base
+        if line == 1:
+            return _fit(f" {desc}", width), muted
+        if line == 2:
+            return _fit(f" {meta}", width), muted
+        return " " * width, base if selected else Style(bgcolor="#101a30")
 
 
 class AgentSessionHistoryModal(ModalScreen[AgentSessionRecord | None]):
     """Pick a previous project Agent session, review it, then continue."""
+
+    BINDINGS = [
+        ("escape", "cancel", ""),
+        ("left", "move_left", ""),
+        ("right", "move_right", ""),
+        ("up", "move_up", ""),
+        ("down", "move_down", ""),
+        ("enter", "open_selected", ""),
+    ]
 
     DEFAULT_CSS = """
     AgentSessionHistoryModal {
         align: center middle;
     }
     AgentSessionHistoryModal #history-box {
-        width: 78;
-        height: auto;
-        max-height: 88vh;
+        width: 94;
+        height: 88vh;
         border: round $accent;
         background: $surface;
         padding: 1 2;
@@ -103,14 +273,10 @@ class AgentSessionHistoryModal(ModalScreen[AgentSessionRecord | None]):
         color: $accent;
         margin-bottom: 1;
     }
-    AgentSessionHistoryModal .session-btn {
-        width: 1fr;
-        height: 3;
-        margin-bottom: 0;
-    }
-    AgentSessionHistoryModal #history-empty {
-        color: $text-muted;
-        margin-bottom: 1;
+    AgentSessionHistoryModal #history-grid-scroll {
+        height: 1fr;
+        overflow-y: auto;
+        background: $surface;
     }
     AgentSessionHistoryModal #history-cancel {
         width: 1fr;
@@ -118,46 +284,77 @@ class AgentSessionHistoryModal(ModalScreen[AgentSessionRecord | None]):
     }
     """
 
-    def __init__(self, sessions: list[AgentSessionRecord], **kwargs) -> None:
+    def __init__(
+        self,
+        sessions: list[AgentSessionRecord],
+        on_delete: Callable[[str], bool] | None = None,
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         self._sessions = sessions
+        self._on_delete = on_delete
 
     def compose(self) -> ComposeResult:
         with Widget(id="history-box"):
             yield Label(t("agent.history_title"), id="history-title")
-            if not self._sessions:
-                yield Static(t("agent.history_empty"), id="history-empty")
-            for idx, session in enumerate(self._sessions):
-                updated = session.updated_at.replace("T", " ")[:10]
-                brief = session_brief(session, max_len=34)
-                label = (
-                    f"{brief}  [{updated} {session.agent_type} {session.status}]"
-                )
-                yield Button(label, id=f"session-{idx}", classes="session-btn")
+            with VerticalScroll(id="history-grid-scroll"):
+                yield _SessionGrid(self._sessions, id="session-grid")
             yield Button(t("agent.btn_cancel"), id="history-cancel", variant="error")
+
+    def on_mount(self) -> None:
+        self.query_one(_SessionGrid).focus()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         event.stop()
-        btn_id = event.button.id or ""
-        if btn_id == "history-cancel":
+        if event.button.id == "history-cancel":
             self.dismiss(None)
-            return
-        if btn_id.startswith("session-"):
-            idx = int(btn_id.removeprefix("session-"))
-            if 0 <= idx < len(self._sessions):
-                session = self._sessions[idx]
-                self.app.push_screen(
-                    AgentSessionDetailModal(session),
-                    lambda confirmed: self._on_detail_closed(session, confirmed),
-                )
+
+    def on__session_grid_selected(self, msg: _SessionGrid.Selected) -> None:
+        msg.stop()
+        self._open_detail(msg.session)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+    def action_move_left(self) -> None:
+        self.query_one(_SessionGrid).move(-1)
+
+    def action_move_right(self) -> None:
+        self.query_one(_SessionGrid).move(1)
+
+    def action_move_up(self) -> None:
+        self.query_one(_SessionGrid).move(-_SessionGrid.COLS)
+
+    def action_move_down(self) -> None:
+        self.query_one(_SessionGrid).move(_SessionGrid.COLS)
+
+    def action_open_selected(self) -> None:
+        self.query_one(_SessionGrid).open_selected()
+
+    def _open_detail(self, session: AgentSessionRecord) -> None:
+        self.app.push_screen(
+            AgentSessionDetailModal(session),
+            lambda action: self._on_detail_closed(session, action),
+        )
 
     def _on_detail_closed(
-        self, session: AgentSessionRecord, confirmed: bool | None
+        self, session: AgentSessionRecord, action: DetailAction | None
     ) -> None:
-        if confirmed:
+        if action == "continue":
             self.dismiss(session)
+        elif action == "delete":
+            self._delete_session(session)
 
-    def on_key(self, event) -> None:
-        if event.key == "escape":
-            self.dismiss(None)
-            event.stop()
+    def _delete_session(self, session: AgentSessionRecord) -> None:
+        if self._on_delete is not None:
+            self._on_delete(session.session_id)
+        self._sessions = [
+            item for item in self._sessions if item.session_id != session.session_id
+        ]
+        self.query_one(_SessionGrid).update_sessions(self._sessions)
+
+
+def _fit(text: str, width: int) -> str:
+    if len(text) > width:
+        text = text[: max(0, width - 1)].rstrip() + "…"
+    return text.ljust(width)

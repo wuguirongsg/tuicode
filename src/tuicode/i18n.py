@@ -91,6 +91,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     "agent.detail_title": {"zh": "历史会话详情", "en": "Session Details"},
     "agent.btn_view":     {"zh": "查看",         "en": "View"},
     "agent.btn_continue": {"zh": "继续此会话",   "en": "Continue Session"},
+    "agent.btn_delete":   {"zh": "删除会话",     "en": "Delete Session"},
     "agent.btn_back":     {"zh": "返回列表",     "en": "Back"},
     # ── App key bindings ──────────────────────────────────────────────────────
     "bind.quit":            {"zh": "退出",           "en": "Quit"},
