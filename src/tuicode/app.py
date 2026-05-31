@@ -26,7 +26,6 @@ from tuicode.ui.menu_bar import MenuBar
 from tuicode.ui.right_panel import RightPanel
 from tuicode.ui.status_bar import StatusBar
 from tuicode.ui.taskbar import WindowTaskBar
-from tuicode.ui.pty_terminal import PtyTerminal
 from tuicode.ui.terminal_strip import TerminalStrip
 from tuicode.ui.workspace import FloatWorkspace
 from tuicode.workspace_state import WorkspaceStateAggregator
@@ -272,8 +271,7 @@ class TuiCodeApp(App):
     # ── 终端聚焦 ──────────────────────────────────────────────────────────────
 
     def action_focus_terminal(self) -> None:
-        terminal = self.query_one(PtyTerminal)
-        terminal.focus()
+        self.query_one(TerminalStrip).focus_active_terminal()
 
     # ── 智能体终端 ────────────────────────────────────────────────────────────
 

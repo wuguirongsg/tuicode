@@ -22,6 +22,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     "status.no_agents":  {"zh": "○ 无 agent", "en": "○ no agents"},
     "status.agents":     {"zh": "● {n} agent", "en": "● {n} agent"},
     "status.agents_pl":  {"zh": "● {n} agents", "en": "● {n} agents"},
+    "status.copyright":  {"zh": "© 玄熵智能", "en": "© XuanShang AI"},
     "status.shortcuts":  {"zh": "^Q 退出  ^` 终端", "en": "^Q quit  ^` terminal"},
     "status.filetree_hint": {
         "zh": "a 新建文件  A 新建夹  r 重命名  d 删除  y 复制路径  Y 相对路径",
@@ -59,6 +60,9 @@ _STRINGS: dict[str, dict[str, str]] = {
     "fileop.deleted":         {"zh": "已删除 {name}", "en": "Deleted {name}"},
     "fileop.failed":          {"zh": "操作失败：{err}", "en": "Operation failed: {err}"},
     # ── TerminalStrip ─────────────────────────────────────────────────────────
+    "terminal.tab_label":   {"zh": "bash", "en": "bash"},
+    "terminal.tab_label_n": {"zh": "bash {n}", "en": "bash {n}"},
+    "terminal.tab_add":     {"zh": "+", "en": "+"},
     "terminal.tab_bash":  {"zh": "[bash]  [+]", "en": "[bash]  [+]"},
     "terminal.drag_hint": {"zh": "─ ↕ 拖动调整终端高度 ↕ ─", "en": "─ ↕ drag to resize terminal ↕ ─"},
     # ── Mascot states ─────────────────────────────────────────────────────────

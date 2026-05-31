@@ -17,9 +17,11 @@ class StatusBar(Widget):
         background: $primary;
         padding: 0 1;
     }
-    StatusBar #sb-left  { width: 1fr; color: $background 90%; }
-    StatusBar #sb-sep   { width: 1; color: $background 40%; }
-    StatusBar #sb-right { width: auto; color: $background 70%; }
+    StatusBar #sb-left      { width: 1fr; color: $background 90%; }
+    StatusBar #sb-copyright { width: auto; color: $background 60%; }
+    StatusBar #sb-sep1,
+    StatusBar #sb-sep       { width: 1; color: $background 40%; }
+    StatusBar #sb-right     { width: auto; color: $background 70%; }
     """
 
     agent_count: reactive[int] = reactive(0)
@@ -30,6 +32,8 @@ class StatusBar(Widget):
 
     def compose(self) -> ComposeResult:
         yield Static(id="sb-left")
+        yield Static("│", id="sb-sep1")
+        yield Static(t("status.copyright"), id="sb-copyright")
         yield Static("│", id="sb-sep")
         yield Static(t("status.shortcuts"), id="sb-right")
 
