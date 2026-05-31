@@ -37,6 +37,8 @@
 
 <!-- 新需求追加到这里 -->
 
+- [2026-05-31] [技术债] [P3] Windows 原生兼容 — 当前原生 Windows 无法运行（pty_terminal.py 顶层 import fcntl/termios 即崩溃，PTY 全链 POSIX-only）；方案见 registry/decisions/2026-05-31-windows-compat.md（PTY 后端抽象 + 剪贴板后端抽象 + 默认 shell 按平台）；现阶段 Windows 用户走 WSL，不堵塞主路径
+
 - [2026-05-29] [技术债] 文件树快捷键暴露（部分完成）— a/A/r/d/y/Y 已在文件树聚焦时显示到底栏状态条；剩余：命令面板补 FileTree 命令入口（并入 P1「功能发现」）
 - [2026-05-29] [用户] 文件管理器增强 — 文件树从只读升级为可操作：新建文件/文件夹、删除、重命名、复制路径等常用操作（已排入 Phase 2B feat-021，已完成）
 - [2026-05-29] [设计评审] [P1] 功能发现 — 底栏快捷键提示补 `^T 智能体` `^⇧P 命令`（status.shortcuts 当前只有退出/终端，最高频入口未暴露）；空状态 hint（i18n.py workspace.hint）加可见启动引导，告诉新用户「怎么启动」而非只说「会显示在这里」

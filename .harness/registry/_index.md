@@ -16,6 +16,8 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-31 15:25] DECISION Windows 原生兼容方案：确认原生 Windows 无法运行（fcntl/termios 顶层 import + PTY 全链 POSIX-only），提出 PTY 后端抽象（PosixPtyBackend / WindowsPtyBackend via pywinpty ConPTY）+ 剪贴板后端 + 默认 shell 按平台；P3 延后，现阶段推荐 WSL → decisions/2026-05-31-windows-compat.md
+
 [2026-05-31 15:30] STATUS 本次 Session 仅 Q&A：Terminal.app 中 Shift+拖拽选区后 Cmd+C 无效，建议保持 Shift 按住再按 Cmd+C 或用 Edit 菜单复制；无代码改动
 
 [2026-05-31 14:58] DONE PTY 终端鼠标选区 + Ctrl+C 复制：TUI 内 PTY 面板支持鼠标拖选并 Ctrl+C 复制到系统剪贴板，253 tests passed
