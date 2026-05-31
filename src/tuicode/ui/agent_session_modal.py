@@ -111,7 +111,9 @@ class _SessionGrid(Widget):
     """Three-column selectable session card grid."""
 
     can_focus = True
-    CARD_H = 5
+    CARD_H = 6
+    ROW_GAP = 1
+    GUTTER = 2
     COLS = 3
 
     BINDINGS = [
@@ -131,7 +133,7 @@ class _SessionGrid(Widget):
     _SessionGrid {
         width: 1fr;
         height: auto;
-        min-height: 16;
+        min-height: 22;
         background: $surface;
     }
     _SessionGrid:focus {
@@ -184,9 +186,15 @@ class _SessionGrid(Widget):
     def on_click(self, event: events.Click) -> None:
         if not self._sessions:
             return
-        col_w = max(1, self.size.width // self.COLS)
-        col = min(event.x // col_w, self.COLS - 1)
-        row = event.y // self.CARD_H
+        col_w = self._card_width()
+        pitch = col_w + self.GUTTER
+        col = event.x // pitch
+        if col >= self.COLS or event.x % pitch >= col_w:
+            return
+        block_h = self.CARD_H + self.ROW_GAP
+        row = event.y // block_h
+        if event.y % block_h >= self.CARD_H:
+            return
         idx = row * self.COLS + col
         if 0 <= idx < len(self._sessions):
             self.selected_index = idx
@@ -198,18 +206,31 @@ class _SessionGrid(Widget):
         if not self._sessions:
             return Strip([Segment(t("agent.history_empty"), Style(color="bright_black"))])
 
-        row = y // self.CARD_H
-        line_in_card = y % self.CARD_H
-        col_w = max(24, self.size.width // self.COLS)
+        block_h = self.CARD_H + self.ROW_GAP
+        row = y // block_h
+        line_in_card = y % block_h
+        col_w = self._card_width()
+        bg = Style(bgcolor="#071226")
+        if line_in_card >= self.CARD_H:
+            return Strip([Segment(" " * self.size.width, bg)])
+
         segments: list[Segment] = []
         for col in range(self.COLS):
             idx = row * self.COLS + col
             if idx >= len(self._sessions):
-                segments.append(Segment(" " * col_w, Style(bgcolor="#101a30")))
-                continue
-            text, style = self._card_line(self._sessions[idx], idx, line_in_card, col_w)
+                text, style = " " * col_w, bg
+            else:
+                text, style = self._card_line(
+                    self._sessions[idx], idx, line_in_card, col_w
+                )
             segments.append(Segment(text, style))
+            if col < self.COLS - 1:
+                segments.append(Segment(" " * self.GUTTER, bg))
         return Strip(segments)
+
+    def _card_width(self) -> int:
+        gutter_total = self.GUTTER * (self.COLS - 1)
+        return max(26, (max(self.size.width, 1) - gutter_total) // self.COLS)
 
     def _card_line(
         self,
@@ -219,7 +240,7 @@ class _SessionGrid(Widget):
         width: int,
     ) -> tuple[str, Style]:
         selected = idx == self.selected_index
-        base = Style(
+        body = Style(
             color="#001018" if selected else "#c8f4ff",
             bgcolor="#b8f4ff" if selected else "#101a30",
             bold=selected,
@@ -228,6 +249,11 @@ class _SessionGrid(Widget):
             color="#003342" if selected else "#8aa0b8",
             bgcolor="#b8f4ff" if selected else "#101a30",
         )
+        border = Style(
+            color="#00e5ff" if selected else "#314b68",
+            bgcolor="#b8f4ff" if selected else "#101a30",
+            bold=selected,
+        )
         title = session_brief(session, max_len=max(10, width - 4))
         desc = session_description(session, max_len=max(10, width - 4))
         meta = (
@@ -235,12 +261,16 @@ class _SessionGrid(Widget):
             f"{session.agent_type} {session.status}"
         )
         if line == 0:
-            return _fit(f" {title}", width), base
+            return _fit("╭" + "─" * (width - 2) + "╮", width), border
         if line == 1:
-            return _fit(f" {desc}", width), muted
+            return _fit(f"│ {title}", width - 1) + "│", body
         if line == 2:
-            return _fit(f" {meta}", width), muted
-        return " " * width, base if selected else Style(bgcolor="#101a30")
+            return _fit(f"│ {desc}", width - 1) + "│", muted
+        if line == 3:
+            return _fit(f"│ {meta}", width - 1) + "│", muted
+        if line == 4:
+            return _fit("│", width - 1) + "│", body
+        return _fit("╰" + "─" * (width - 2) + "╯", width), border
 
 
 class AgentSessionHistoryModal(ModalScreen[AgentSessionRecord | None]):

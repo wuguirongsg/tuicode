@@ -253,6 +253,28 @@ class TestAgentSessionHistoryModal:
 
         asyncio.run(run())
 
+    def test_grid_cards_render_with_borders(self):
+        record = AgentSessionRecord(
+            session_id="abc123ef",
+            project_root="/tmp/project",
+            title="Claude Code",
+            agent_type="claude",
+            command="claude",
+            created_at="2026-05-30T00:00:00+00:00",
+            updated_at="2026-05-30T00:01:00+00:00",
+            status="ended",
+            summary="任务：卡片边框",
+        )
+        grid = _SessionGrid([record])
+
+        top, _ = grid._card_line(record, 0, 0, 32)
+        title, _ = grid._card_line(record, 0, 1, 32)
+        bottom, _ = grid._card_line(record, 0, 5, 32)
+
+        assert top.startswith("╭") and top.endswith("╮")
+        assert title.startswith("│ ") and title.endswith("│")
+        assert bottom.startswith("╰") and bottom.endswith("╯")
+
     def test_delete_from_detail_refreshes_history_grid(self):
         received: list[AgentSessionRecord | None] = []
         deleted: list[str] = []
