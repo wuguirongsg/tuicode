@@ -60,6 +60,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     "fileop.deleted":         {"zh": "已删除 {name}", "en": "Deleted {name}"},
     "fileop.failed":          {"zh": "操作失败：{err}", "en": "Operation failed: {err}"},
     # ── TerminalStrip ─────────────────────────────────────────────────────────
+    "term.copied":          {"zh": "已复制到剪贴板", "en": "Copied to clipboard"},
     "terminal.tab_label":   {"zh": "bash", "en": "bash"},
     "terminal.tab_label_n": {"zh": "bash {n}", "en": "bash {n}"},
     "terminal.tab_add":     {"zh": "+", "en": "+"},

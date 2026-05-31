@@ -22,6 +22,7 @@ _DEFAULT_CHAR = pyte.screens.Char(" ")
 _SB_THUMB = Style(color="white")
 _SB_TRACK = Style(color="bright_black")
 _TERM_DEFAULT = Style(color="#ffffff", bgcolor="#000000")
+_SEL_BG = "#2060c8"   # 选区高亮背景色
 
 # 扫描 PTY 输出中的鼠标模式开关序列（pyte 不把这些写入 screen.mode）
 _RE_MOUSE_MODE = re.compile(rb"\x1b\[\?(\d+)([hl])")
@@ -32,7 +33,7 @@ _RE_BPASTE_MODE = re.compile(rb"\x1b\[\?2004([hl])")
 
 if TYPE_CHECKING:
     from textual.events import (
-        Key, MouseDown, MouseScrollDown, MouseScrollUp, MouseUp, Paste, Resize,
+        Key, MouseDown, MouseMove, MouseScrollDown, MouseScrollUp, MouseUp, Paste, Resize,
     )
 
 # ── pyte 颜色 → Rich 颜色字符串 ──────────────────────────────────────────────
@@ -201,6 +202,10 @@ class PtyTerminal(Widget):
         self._app_mouse = False      # 子进程是否启用了鼠标跟踪
         self._app_mouse_sgr = False  # 子进程是否使用 SGR 鼠标编码
         self._bracketed_paste = False  # 子进程是否启用了 bracketed paste mode
+        # 鼠标选区：(abs_row, col) 均为组合缓冲区绝对行列；None = 无选区
+        self._sel_start: tuple[int, int] | None = None
+        self._sel_end: tuple[int, int] | None = None
+        self._selecting = False
 
     # ── 生命周期 ───────────────────────────────────────────────────────────────
 
@@ -344,6 +349,27 @@ class PtyTerminal(Widget):
             return None
         return col + 1, row + 1
 
+    def _screen_to_abs(self, screen_x: int, screen_y: int) -> tuple[int, int] | None:
+        """屏幕绝对坐标 → (abs_row, col)（组合缓冲区行，0-indexed）；越界返回 None。"""
+        r = self.region
+        col = screen_x - r.x - 1
+        y = screen_y - r.y - 1
+        if col < 0 or y < 0:
+            return None
+        screen = self._pyte_screen
+        if screen is None:
+            return None
+        col = min(col, screen.columns - 1)
+        hist_len = len(screen.scrollback)
+        if self._scroll_offset == 0:
+            abs_row = hist_len + y
+        else:
+            total = hist_len + screen.lines
+            view_bottom = total - self._scroll_offset
+            view_top = view_bottom - self._rows
+            abs_row = view_top + y
+        return max(0, abs_row), max(0, col)
+
     def _write_mouse(self, button: int, col: int, row: int, press: bool) -> None:
         """将鼠标事件编码为 SGR（首选）或 X10 序列并写入 PTY。"""
         if self._master_fd is None:
@@ -401,7 +427,16 @@ class PtyTerminal(Widget):
 
     def on_mouse_down(self, event: MouseDown) -> None:  # type: ignore[override]
         self.focus()
-        if not self._mouse_enabled():
+        # 无 PTY 鼠标模式，或用户按住 Shift → 启动文本选区（不转发给子进程）
+        if not self._mouse_enabled() or event.shift:
+            pos = self._screen_to_abs(event.screen_x, event.screen_y)
+            if pos:
+                self._sel_start = pos
+                self._sel_end = pos
+                self._selecting = True
+                self.capture_mouse()
+                self.refresh()
+            event.stop()
             return
         pos = self._screen_to_pty(event.screen_x, event.screen_y)
         if pos is None:
@@ -410,7 +445,26 @@ class PtyTerminal(Widget):
         self._write_mouse(btn, pos[0], pos[1], press=True)
         event.stop()
 
+    def on_mouse_move(self, event: MouseMove) -> None:  # type: ignore[override]
+        if not self._selecting:
+            return
+        pos = self._screen_to_abs(event.screen_x, event.screen_y)
+        if pos:
+            self._sel_end = pos
+            self.refresh()
+        event.stop()
+
     def on_mouse_up(self, event: MouseUp) -> None:  # type: ignore[override]
+        if self._selecting:
+            self._selecting = False
+            self.release_mouse()
+            # 单击未拖动 → 清除零宽选区
+            if self._sel_start == self._sel_end:
+                self._sel_start = None
+                self._sel_end = None
+            self.refresh()
+            event.stop()
+            return
         if not self._mouse_enabled():
             return
         pos = self._screen_to_pty(event.screen_x, event.screen_y)
@@ -425,12 +479,26 @@ class PtyTerminal(Widget):
     def on_key(self, event: Key) -> None:  # type: ignore[override]
         if self._master_fd is None or event.key in _APP_RESERVED_KEYS:
             return
+
+        # 有选区时 Ctrl+C → 复制选区文本，不发 SIGINT
+        if event.key == "ctrl+c" and self._sel_start is not None:
+            text = self._get_selected_text()
+            if text:
+                from tuicode.clipboard import write as _clipboard_write
+                _clipboard_write(text)
+                self.app.notify(t("term.copied"), timeout=1.0)
+            self._clear_selection()
+            event.stop()
+            return
+
         if event.key == "ctrl+c":
             # 计数交给 App（全局双击退出）；\x03 仍照常透传给子进程中断 agent
             self.app._ctrl_c_pressed()
+
         if event.key == "ctrl+v":
             # 从系统剪贴板粘贴，而非发 \x16（verbatim 字符）
             from tuicode.clipboard import read as _clipboard_read
+            self._clear_selection()
             text = _clipboard_read()
             if text:
                 event.stop()
@@ -442,6 +510,10 @@ class PtyTerminal(Widget):
                 except OSError:
                     pass
             return
+
+        # 其他按键清除选区
+        self._clear_selection()
+
         data = self._key_to_bytes(event)
         if data:
             event.stop()
@@ -491,6 +563,44 @@ class PtyTerminal(Widget):
         except OSError:
             pass
 
+    # ── 选区 ──────────────────────────────────────────────────────────────────
+
+    def _clear_selection(self) -> None:
+        if self._sel_start is not None or self._sel_end is not None:
+            self._sel_start = None
+            self._sel_end = None
+            self.refresh()
+
+    def _get_selected_text(self) -> str:
+        """将当前选区范围内的字符提取为纯文本，每行末尾去除空白。"""
+        if self._sel_start is None or self._sel_end is None:
+            return ""
+        screen = self._pyte_screen
+        if screen is None:
+            return ""
+        raw_s = min(self._sel_start, self._sel_end)
+        raw_e = max(self._sel_start, self._sel_end)
+        hist = screen.scrollback
+        hist_len = len(hist)
+        hist_list = list(hist)
+        lines: list[str] = []
+        for abs_row in range(raw_s[0], raw_e[0] + 1):
+            if abs_row < hist_len:
+                row = hist_list[abs_row]
+            else:
+                screen_y = abs_row - hist_len
+                if screen_y >= screen.lines:
+                    break
+                row = screen.buffer[screen_y]
+            col_s = raw_s[1] if abs_row == raw_s[0] else 0
+            col_e = (raw_e[1] + 1) if abs_row == raw_e[0] else screen.columns
+            chars = []
+            for x in range(col_s, col_e):
+                c = row.get(x)
+                chars.append(c.data if c and c.data else " ")
+            lines.append("".join(chars).rstrip())
+        return "\n".join(lines)
+
     def get_scrollback_text(self, max_lines: int = 500) -> str:
         """返回 pyte scrollback 缓冲区中的干净文本（对话历史）。
 
@@ -536,16 +646,18 @@ class PtyTerminal(Widget):
         if screen is None:
             return Strip([Segment(" " * self._cols, _TERM_DEFAULT)])
 
+        hist_len = len(screen.scrollback)
+
         if self._scroll_offset == 0:
             # 正常视图：直接渲染当前 pyte 屏幕
             if y >= screen.lines:
                 return Strip([Segment(" " * screen.columns, _TERM_DEFAULT)])
             row = screen.buffer[y]
             show_cursor = True
+            line_idx = hist_len + y
         else:
             # 历史滚动视图：从 scrollback + 当前屏幕组合渲染
             hist = screen.scrollback
-            hist_len = len(hist)
             total = hist_len + screen.lines
             view_bottom = total - self._scroll_offset
             view_top = view_bottom - self._rows
@@ -561,6 +673,17 @@ class PtyTerminal(Widget):
                 row = screen.buffer[screen_y]
             show_cursor = False
 
+        # 计算本行的选区列范围（-1 表示无选区）
+        in_sel_row = False
+        sel_col_s = sel_col_e = 0
+        if self._sel_start and self._sel_end:
+            raw_s = min(self._sel_start, self._sel_end)
+            raw_e = max(self._sel_start, self._sel_end)
+            if raw_s[0] <= line_idx <= raw_e[0]:
+                in_sel_row = True
+                sel_col_s = raw_s[1] if line_idx == raw_s[0] else 0
+                sel_col_e = (raw_e[1] + 1) if line_idx == raw_e[0] else screen.columns
+
         segments: list[Segment] = []
         for x in range(screen.columns):
             char = row.get(x, _DEFAULT_CHAR)
@@ -570,7 +693,10 @@ class PtyTerminal(Widget):
                 continue
             fg = _to_rich_color(char.fg) or "#ffffff"
             bg = _to_rich_color(char.bg) or "#000000"
-            if ch == " ":
+            if in_sel_row and sel_col_s <= x < sel_col_e:
+                # 选区高亮：固定蓝色背景，保留前景色
+                style = Style(color=fg, bgcolor=_SEL_BG)
+            elif ch == " ":
                 # 背景单元格：只用颜色，不渲染 underline/bold 等装饰
                 # 规避 pyte 将当前 SGR 属性（含 underline）写入被清除单元格的问题
                 style = Style(color=fg, bgcolor=bg)
