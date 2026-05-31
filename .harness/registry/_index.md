@@ -16,6 +16,12 @@
 
 <!-- 新条目追加到这里（上方） -->
 
+[2026-05-31 15:30] STATUS 本次 Session 仅 Q&A：Terminal.app 中 Shift+拖拽选区后 Cmd+C 无效，建议保持 Shift 按住再按 Cmd+C 或用 Edit 菜单复制；无代码改动
+
+[2026-05-31 14:58] DONE PTY 终端鼠标选区 + Ctrl+C 复制：TUI 内 PTY 面板支持鼠标拖选并 Ctrl+C 复制到系统剪贴板，253 tests passed
+
+[2026-05-31 14:50] FIX 打通系统剪贴板：修复编辑器和 PTY 终端复制粘贴与宿主系统剪贴板互通，253 tests passed
+
 [2026-05-31 14:10] FIX 本地 Agent 检测结果持久化到缓存文件，启动器优先读取缓存并支持重新检测，250 tests passed
 
 [2026-05-31 12:55] FIX 新建 Agent 会话启动器改为初始空列表 + 点击检测本地 Agent 后三列展示，支持自定义 Agent 入列表，248 tests passed
@@ -161,3 +167,5 @@
 [2026-05-26 18:00] DECISION AgentDeck 项目 harness 初始化完成，确认 Phase 1 包含 12 条 feat → decisions/init.md
 
 [2026-05-29] DONE feat-015/016/017/018 Phase 2A 全部完成：Git stage/commit 闭环、布局预设 Ctrl+1/2/3、Agent 启动器 Modal、命令面板 Ctrl+Shift+P，172 tests passed → sessions/2026-05-29-build.md
+
+[2026-05-31] DONE 底部终端多 Tab 支持 + 状态栏版权区：TerminalStrip 升级多标签切换/新建/关闭，StatusBar 增加版权段，253 tests passed
