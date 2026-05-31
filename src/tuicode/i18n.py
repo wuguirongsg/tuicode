@@ -84,6 +84,12 @@ _STRINGS: dict[str, dict[str, str]] = {
     # ── NewAgentModal ─────────────────────────────────────────────────────────
     "agent.modal_title":  {"zh": "新建 Agent 会话", "en": "New Agent Session"},
     "agent.custom_label": {"zh": "自定义命令：",    "en": "Custom command:"},
+    "agent.detect_hint":  {"zh": "点击「检测本地 Agent」后显示已安装的 Agent", "en": "Click Detect Local Agents to show installed agents"},
+    "agent.detect_empty": {"zh": "未检测到本地 Agent；可以输入自定义命令", "en": "No local agents detected. Enter a custom command instead"},
+    "agent.source_detected": {"zh": "本地已安装", "en": "installed locally"},
+    "agent.source_custom": {"zh": "自定义 Agent", "en": "custom agent"},
+    "agent.btn_detect":   {"zh": "检测本地 Agent", "en": "Detect Local Agents"},
+    "agent.btn_add_custom": {"zh": "加入列表", "en": "Add to List"},
     "agent.btn_start":    {"zh": "启动",            "en": "Start"},
     "agent.btn_cancel":   {"zh": "取消",            "en": "Cancel"},
     "agent.history_title": {"zh": "继续历史 Agent 会话", "en": "Continue Agent Session"},

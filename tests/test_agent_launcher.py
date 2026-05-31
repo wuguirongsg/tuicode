@@ -8,7 +8,14 @@ from textual.app import App, ComposeResult
 
 from tuicode.ui.agent_terminal_window import AgentTerminalWindow
 from tuicode.ui.agent_session_modal import AgentSessionHistoryModal, _SessionGrid
-from tuicode.ui.new_agent_modal import AgentConfig, NewAgentModal, _PRESETS
+from tuicode.ui.new_agent_modal import (
+    AgentConfig,
+    AgentOption,
+    NewAgentModal,
+    _AgentGrid,
+    _PRESETS,
+    detect_installed_agents,
+)
 from tuicode.agent_memory import AgentSessionRecord
 
 
@@ -51,30 +58,89 @@ class TestNewAgentModal:
     def test_presets_non_empty(self):
         assert len(_PRESETS) >= 3
 
-    def test_preset_dismiss_on_button(self):
-        """点击预设按钮应 dismiss 并返回 AgentConfig。"""
-        received: list[AgentConfig | None] = []
+    def test_detect_installed_agents_uses_passive_executable_check(self, monkeypatch):
+        """检测本地 Agent 只看可执行文件是否存在，不启动命令。"""
+
+        def fake_which(name: str) -> str | None:
+            return "/usr/local/bin/codex" if name == "codex" else None
+
+        monkeypatch.setattr("tuicode.ui.new_agent_modal.shutil.which", fake_which)
+        monkeypatch.setattr(
+            "tuicode.ui.new_agent_modal.Path.exists",
+            lambda self: False,
+        )
+
+        detected = detect_installed_agents()
+        assert [agent.agent_type for agent in detected] == ["codex"]
+
+    def test_initial_agent_grid_is_empty_before_detection(self):
+        async def run():
+            class _App(App):
+                CSS = "Screen { background: #000; }"
+
+                async def on_mount(self) -> None:
+                    await self.push_screen(NewAgentModal(detector=lambda: []))
+
+            app = _App()
+            async with app.run_test(headless=True) as pilot:
+                await pilot.pause()
+                grid = app.screen_stack[-1].query_one(_AgentGrid)
+                assert grid._options == []
+                assert grid.scanned is False
+
+        asyncio.run(run())
+
+    def test_detect_button_populates_agent_grid(self):
+        option = AgentOption("Codex", "codex", "codex")
 
         async def run():
             class _App(App):
                 CSS = "Screen { background: #000; }"
 
                 async def on_mount(self) -> None:
-                    await self.push_screen(NewAgentModal(), received.append)
+                    await self.push_screen(
+                        NewAgentModal(detector=lambda: [option])
+                    )
+
+            app = _App()
+            async with app.run_test(headless=True) as pilot:
+                await pilot.pause()
+                await pilot.click("#btn-detect")
+                await pilot.pause()
+                grid = app.screen_stack[-1].query_one(_AgentGrid)
+                assert grid._options == [option]
+                assert grid.scanned is True
+
+        asyncio.run(run())
+
+    def test_preset_dismiss_on_button(self):
+        """检测后启动选中 Agent 应 dismiss 并返回 AgentConfig。"""
+        received: list[AgentConfig | None] = []
+        label, command, agent_type = _PRESETS[0]
+        option = AgentOption(label, command, agent_type)
+
+        async def run():
+            class _App(App):
+                CSS = "Screen { background: #000; }"
+
+                async def on_mount(self) -> None:
+                    await self.push_screen(
+                        NewAgentModal(detector=lambda: [option]), received.append
+                    )
 
             async with _App().run_test(headless=True) as pilot:
                 await pilot.pause()
-                # 点击第一个预设（Claude Code）
-                _, _, atype = _PRESETS[0]
-                await pilot.click(f"#preset-{atype}")
+                await pilot.click("#btn-detect")
+                await pilot.pause()
+                await pilot.click("#btn-ok")
                 await pilot.pause()
 
         asyncio.run(run())
         assert len(received) == 1
         result = received[0]
         assert result is not None
-        assert result.agent_type == _PRESETS[0][2]
-        assert result.command == _PRESETS[0][1]
+        assert result.agent_type == agent_type
+        assert result.command == command
 
     def test_cancel_button_dismisses_none(self):
         """点击取消应 dismiss None。"""
@@ -138,6 +204,30 @@ class TestNewAgentModal:
         assert result is not None
         assert result.command == "myagent --flag"
         assert result.agent_type == "custom"
+
+    def test_custom_command_can_be_added_to_agent_grid(self):
+        """自定义命令可加入与检测结果相同的三列 Agent 列表。"""
+
+        async def run():
+            class _App(App):
+                CSS = "Screen { background: #000; }"
+
+                async def on_mount(self) -> None:
+                    await self.push_screen(NewAgentModal(detector=lambda: []))
+
+            app = _App()
+            async with app.run_test(headless=True) as pilot:
+                await pilot.pause()
+                await pilot.click("#custom-input")
+                await pilot.press(*list("myagent --flag"))
+                await pilot.click("#btn-add-custom")
+                await pilot.pause()
+                grid = app.screen_stack[-1].query_one(_AgentGrid)
+                assert len(grid._options) == 1
+                assert grid._options[0].command == "myagent --flag"
+                assert grid._options[0].source == "custom"
+
+        asyncio.run(run())
 
 
 class TestAgentSessionHistoryModal:
