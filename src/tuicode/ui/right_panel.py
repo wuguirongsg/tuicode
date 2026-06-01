@@ -9,6 +9,56 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import DirectoryTree, Input, Label, ListItem, ListView, Static
 
+_PANEL_MIN_W = 20
+_PANEL_MAX_W = 60
+
+
+class _PanelResizeHandle(Widget):
+    """左侧拖拽把手 — 左右拖动改变 RightPanel 宽度。"""
+
+    DEFAULT_CSS = """
+    _PanelResizeHandle {
+        width: 1;
+        height: 1fr;
+        background: $panel-darken-1;
+        color: $text-disabled;
+        content-align: center middle;
+    }
+    _PanelResizeHandle:hover { color: $accent; background: $panel; }
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._dragging = False
+        self._drag_start_x = 0
+        self._drag_start_w = 0
+
+    def render(self) -> str:
+        return "┃"
+
+    def on_mouse_down(self, event: events.MouseDown) -> None:
+        panel = self.parent
+        self._dragging = True
+        self._drag_start_x = event.screen_x
+        w = panel.styles.width
+        self._drag_start_w = int(w.value) if (w and w.value) else 28
+        self.capture_mouse()
+        event.stop()
+
+    def on_mouse_move(self, event: events.MouseMove) -> None:
+        if not self._dragging:
+            return
+        panel = self.parent
+        # 向左拖 → screen_x 减小 → 面板变宽
+        delta = self._drag_start_x - event.screen_x
+        new_w = max(_PANEL_MIN_W, min(_PANEL_MAX_W, self._drag_start_w + delta))
+        panel.styles.width = new_w
+        event.stop()
+
+    def on_mouse_up(self, event: events.MouseUp) -> None:
+        self._dragging = False
+        self.release_mouse()
+
 from tuicode.bus import default_bus
 from tuicode.events import FileModified, GitStatusChanged
 from tuicode.git_status import GitError, GitOps
@@ -204,9 +254,13 @@ class RightPanel(Widget):
     RightPanel {
         width: 28;
         height: 1fr;
-        border-left: solid $panel-lighten-1;
-        layout: vertical;
+        layout: horizontal;
         background: $surface;
+    }
+    RightPanel #rp-inner {
+        width: 1fr;
+        height: 1fr;
+        layout: vertical;
     }
     RightPanel #rp-tabs {
         height: 1;
@@ -254,16 +308,18 @@ class RightPanel(Widget):
         self._unsubscribe_git_status = None
 
     def compose(self) -> ComposeResult:
-        yield MascotPanel(id="rp-mascot")
-        with Widget(id="rp-tabs"):
-            yield Static(t("panel.tab_files"), id="tab-files", classes="rp-tab rp-tab-active")
-            yield Static(t("panel.tab_git"), id="tab-git", classes="rp-tab")
-        with Widget(id="files-view"):
-            yield FileTree(self._root, id="file-tree")
-        with Widget(id="git-view"):
-            yield Static("git: checking...", id="git-status")
-            yield GitFileList(id="git-files")
-            yield CommitBar(id="commit-bar")
+        yield _PanelResizeHandle()
+        with Widget(id="rp-inner"):
+            yield MascotPanel(id="rp-mascot")
+            with Widget(id="rp-tabs"):
+                yield Static(t("panel.tab_files"), id="tab-files", classes="rp-tab rp-tab-active")
+                yield Static(t("panel.tab_git"), id="tab-git", classes="rp-tab")
+            with Widget(id="files-view"):
+                yield FileTree(self._root, id="file-tree")
+            with Widget(id="git-view"):
+                yield Static("git: checking...", id="git-status")
+                yield GitFileList(id="git-files")
+                yield CommitBar(id="commit-bar")
 
     def on_mount(self) -> None:
         # 默认显示文件树，Git 视图隐藏（feat-020：Tab 真切换）
