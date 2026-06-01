@@ -377,3 +377,16 @@ class FloatWindow(Widget):
         self.styles.height = self._win_h
         self._is_minimized = False
         self.post_message(self.MinimizeToggled(self, False))
+
+    def set_tiling_mode(self, tiled: bool) -> None:
+        """拼贴模式切换：隐藏底部手柄，边框换极简风格以最大化内容面积。"""
+        try:
+            footer = self.query_one("#win-footer")
+            footer.display = not tiled
+        except Exception:
+            pass
+        if tiled:
+            self._stop_marquee()
+            self.styles.border = ("solid", "#1e2030")
+        else:
+            self._refresh_border()

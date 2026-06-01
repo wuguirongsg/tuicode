@@ -124,6 +124,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     "bind.layout_dual":     {"zh": "双 Agent 布局",   "en": "Dual agent"},
     "bind.layout_debug":    {"zh": "调试布局",        "en": "Debug layout"},
     "bind.command_palette": {"zh": "命令面板",        "en": "Command palette"},
+    "bind.tiling":          {"zh": "拼贴模式",        "en": "Tiling mode"},
     # ── App runtime messages ──────────────────────────────────────────────────
     "app.ctrl_c_hint": {"zh": "再按一次 Ctrl+C 退出", "en": "Press Ctrl+C again to quit"},
     "app.lang_switched": {

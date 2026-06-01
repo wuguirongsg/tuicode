@@ -78,6 +78,7 @@ class TuiCodeApp(App):
         Binding("ctrl+3", "layout_preset(3)", t("bind.layout_debug"), priority=True),
         Binding("ctrl+underscore", "command_palette", t("bind.command_palette"), priority=True),
         Binding("f1", "command_palette", t("bind.command_palette"), priority=True),
+        Binding("ctrl+backslash", "toggle_tiling", t("bind.tiling"), priority=True),
     ]
 
     CSS = """
@@ -359,6 +360,15 @@ class TuiCodeApp(App):
 
     def action_layout_preset(self, n: int) -> None:
         self.query_one(FloatWorkspace).apply_preset(n)
+
+    # ── 拼贴模式 Ctrl+\ ──────────────────────────────────────────────────────
+
+    def action_toggle_tiling(self) -> None:
+        ws = self.query_one(FloatWorkspace)
+        if ws._is_tiled:
+            ws.exit_tiling()
+        else:
+            ws.apply_tiling()
 
     # ── 重置窗口位置 ──────────────────────────────────────────────────────────
 

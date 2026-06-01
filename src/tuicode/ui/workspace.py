@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import math
+from dataclasses import dataclass
+
 from textual.app import ComposeResult
 from textual.message import Message
 from textual.widget import Widget
@@ -7,6 +10,48 @@ from textual.widgets import Static
 
 from tuicode.i18n import t
 from tuicode.ui.float_window import FloatWindow
+
+
+@dataclass
+class _WinState:
+    """保存拼贴前的浮窗位置/尺寸，退出拼贴时恢复。"""
+    win_x: int
+    win_y: int
+    win_w: int
+    win_h: int
+    stack_y: int
+
+
+def _tile_grid(count: int, ws_w: int, ws_h: int) -> list[tuple[int, int, int, int]]:
+    """计算 N 个浮窗的最优网格排列，返回 (x, y, w, h) 列表。"""
+    if count == 0:
+        return []
+    min_w = FloatWindow.MIN_WIDTH
+    min_h = FloatWindow.MIN_HEIGHT
+    cols = math.ceil(math.sqrt(count))
+    rows = math.ceil(count / cols)
+    cell_h = max(min_h, ws_h // rows)
+
+    positions: list[tuple[int, int, int, int]] = []
+    for i in range(count):
+        row = i // cols
+        col = i % cols
+        wins_in_row = min(cols, count - row * cols)
+        cell_w = max(min_w, ws_w // wins_in_row)
+        x = col * cell_w
+        y = row * cell_h
+        # 最后一列延伸到右边缘，避免像素缝隙
+        if col == wins_in_row - 1:
+            w = max(min_w, ws_w - x)
+        else:
+            w = cell_w
+        # 最后一行延伸到底边缘
+        if row == rows - 1:
+            h = max(min_h, ws_h - y)
+        else:
+            h = cell_h
+        positions.append((x, y, w, h))
+    return positions
 
 
 # ── 布局预设计算函数 ────────────────────────────────────────────────────────────
@@ -182,6 +227,8 @@ class FloatWorkspace(Widget):
         self._next_x = 4
         self._next_y = 1
         self._windows: list[FloatWindow] = []
+        self._is_tiled = False
+        self._pre_tile_states: dict[int, _WinState] = {}
 
     def compose(self) -> ComposeResult:
         yield _CyberpunkHint(id="ws-hint")
@@ -211,10 +258,70 @@ class FloatWorkspace(Widget):
         return window
 
     def on_float_window_closed(self, message: FloatWindow.Closed) -> None:
+        self._pre_tile_states.pop(id(message.window), None)
         if message.window in self._windows:
             self._windows.remove(message.window)
         if not self._windows:
+            self._is_tiled = False
             self.query_one("#ws-hint").display = True
+        elif self._is_tiled:
+            self._apply_tile_grid()
+
+    def apply_tiling(self) -> None:
+        """进入拼贴模式：保存当前位置，应用最优网格，切换极简边框。"""
+        wins = [w for w in self._windows if not w._is_minimized]
+        if not wins:
+            return
+        # 保存拼贴前状态
+        self._pre_tile_states = {
+            id(w): _WinState(w._win_x, w._win_y, w._win_w, w._win_h, w._stack_y)
+            for w in self._windows
+        }
+        self._is_tiled = True
+        self._apply_tile_grid()
+
+    def _apply_tile_grid(self) -> None:
+        """使用当前窗口列表重新计算并应用网格排列（内部调用）。"""
+        wins = list(self._windows)
+        if not wins:
+            return
+        ws_w, ws_h = self.size.width, self.size.height
+        positions = _tile_grid(len(wins), ws_w, ws_h)
+        cumulative = 0
+        for win, (tx, ty, tw, th) in zip(wins, positions):
+            if win._is_minimized:
+                win.restore()
+            win._win_x   = tx
+            win._win_y   = ty - cumulative
+            win._win_w   = tw
+            win._win_h   = th
+            win._stack_y = cumulative
+            win.styles.width  = tw
+            win.styles.height = th
+            win.styles.offset = (tx, ty - cumulative)
+            win.set_tiling_mode(True)
+            cumulative += th
+
+    def exit_tiling(self) -> None:
+        """退出拼贴模式：恢复保存的位置和边框。"""
+        if not self._is_tiled:
+            return
+        self._is_tiled = False
+        cumulative = 0
+        for win in self._windows:
+            state = self._pre_tile_states.get(id(win))
+            if state is not None:
+                win._win_x   = state.win_x
+                win._win_y   = state.win_y
+                win._win_w   = state.win_w
+                win._win_h   = state.win_h
+                win._stack_y = state.stack_y
+                cumulative = state.stack_y + state.win_h
+                win.styles.width  = state.win_w
+                win.styles.height = state.win_h
+                win.styles.offset = (state.win_x, state.win_y)
+            win.set_tiling_mode(False)
+        self._pre_tile_states.clear()
 
     def apply_preset(self, preset: int) -> None:
         """Rearrange open windows according to layout preset 1/2/3."""

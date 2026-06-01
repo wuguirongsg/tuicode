@@ -231,7 +231,7 @@
       "description": "浮窗拼贴模式 — Ctrl+\\ 自动计算当前所有可见浮窗的最优网格排列，拼贴模式下隐藏边框装饰以最大化代码显示面积",
       "acceptance": "Ctrl+\\ 将 2-4 个浮窗自动网格排列；拼贴后每个浮窗占据均等区域；再次 Ctrl+\\ 或关闭浮窗可退出拼贴；窗口数为 0 时不报错",
       "depends_on": ["feat-003", "feat-004"],
-      "passes": false
+      "passes": true
     },
     {
       "id": "feat-026",
