@@ -15,6 +15,7 @@
 ---
 
 <!-- 新条目追加到这里（上方） -->
+[2026-06-01] DISCOVER 架构文档 vs 代码库差异分析：扫描全部 15 个顶层模块 + 17 个 UI 组件，识别出 19 项架构文档描述但代码库缺失/仅存桩的功能（含 Agent Adapter 深度集成、MCP Bridge、工具调用审批、LSP、文件搜索、插件系统、配置系统、拼贴模式、工具栏折叠、全屏等 Phase 2+ 特性），所有 feat-001 至 feat-021 均 passes=true
 
 [2026-05-31 15:25] DECISION Windows 原生兼容方案：确认原生 Windows 无法运行（fcntl/termios 顶层 import + PTY 全链 POSIX-only），提出 PTY 后端抽象（PosixPtyBackend / WindowsPtyBackend via pywinpty ConPTY）+ 剪贴板后端 + 默认 shell 按平台；P3 延后，现阶段推荐 WSL → decisions/2026-05-31-windows-compat.md
 
