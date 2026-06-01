@@ -8,7 +8,9 @@ from typing import Optional
 
 from rich.markup import escape
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import ScrollableContainer
+from textual import events
 from textual.widgets import Static
 
 from tuicode.ui.float_window import FloatWindow
@@ -135,6 +137,11 @@ def _render_split(rows: list[_DiffRow], total_width: int = 94) -> str:
 class DiffPreviewWindow(FloatWindow):
     """Floating window showing a side-by-side Git diff."""
 
+    BINDINGS = [
+        Binding("ctrl+u", "scroll_up_half", "上翻半页", show=False),
+        Binding("ctrl+d", "scroll_down_half", "下翻半页", show=False),
+    ]
+
     DEFAULT_CSS = """
     DiffPreviewWindow #diff-scroll {
         width: 1fr;
@@ -151,10 +158,27 @@ class DiffPreviewWindow(FloatWindow):
     def __init__(self, path: Path, diff: str, **kwargs) -> None:
         self._path = path
         self._diff = diff or "(no diff)"
+        self._rows: list[_DiffRow] = []
         super().__init__(title=f"diff: {path.name}", **kwargs)
 
     def compose_body(self) -> ComposeResult:
-        rows = _parse_diff(self._diff)
-        rendered = _render_split(rows, total_width=self.DEFAULT_WIDTH - 4)
+        self._rows = _parse_diff(self._diff)
+        rendered = _render_split(self._rows, total_width=self.DEFAULT_WIDTH - 4)
         with ScrollableContainer(id="diff-scroll"):
             yield Static(rendered, markup=True, id="diff-content")
+
+    def on_resize(self, event: events.Resize) -> None:
+        inner_w = max(20, event.size.width - 4)
+        rendered = _render_split(self._rows, total_width=inner_w)
+        try:
+            self.query_one("#diff-content", Static).update(rendered)
+        except Exception:
+            pass
+
+    def action_scroll_up_half(self) -> None:
+        scroll = self.query_one("#diff-scroll", ScrollableContainer)
+        scroll.scroll_page_up(animate=False)
+
+    def action_scroll_down_half(self) -> None:
+        scroll = self.query_one("#diff-scroll", ScrollableContainer)
+        scroll.scroll_page_down(animate=False)

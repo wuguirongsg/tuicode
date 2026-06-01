@@ -204,6 +204,48 @@
         "feat-010"
       ],
       "passes": true
+    },
+    {
+      "id": "feat-022",
+      "description": "Diff 预览自适应重绘 — DiffPreviewWindow 监听 Resize 事件根据实际宽度重算 split 布局，补 Ctrl+U/D 快速翻页",
+      "acceptance": "拖动 DiffPreviewWindow 改变宽度后 diff 内容自动重排，不错位；Ctrl+U/D 可翻页；窗口宽度极小时不崩溃",
+      "depends_on": ["feat-014"],
+      "passes": true
+    },
+    {
+      "id": "feat-023",
+      "description": "右栏动态调宽 — RightPanel 左侧加拖拽把手，允许用户左右拖动改变右栏宽度（20~60 列）",
+      "acceptance": "拖动把手后右栏宽度实时变化；文件名不再被截断；宽度限定在 20~60 列之间；释放鼠标后宽度锁定",
+      "depends_on": ["feat-005", "feat-012"],
+      "passes": true
+    },
+    {
+      "id": "feat-024",
+      "description": "状态栏增强 — 底栏左侧显示 Git 分支名，中部显示当前活动文件相对路径，快捷键提示随焦点组件动态切换",
+      "acceptance": "底栏显示当前 Git 分支名；打开/切换文件后显示相对路径；焦点在编辑器时显示编辑器快捷键，焦点在终端时显示终端快捷键",
+      "depends_on": ["feat-001", "feat-012"],
+      "passes": false
+    },
+    {
+      "id": "feat-025",
+      "description": "浮窗拼贴模式 — Ctrl+\\ 自动计算当前所有可见浮窗的最优网格排列，拼贴模式下隐藏边框装饰以最大化代码显示面积",
+      "acceptance": "Ctrl+\\ 将 2-4 个浮窗自动网格排列；拼贴后每个浮窗占据均等区域；再次 Ctrl+\\ 或关闭浮窗可退出拼贴；窗口数为 0 时不报错",
+      "depends_on": ["feat-003", "feat-004"],
+      "passes": false
+    },
+    {
+      "id": "feat-026",
+      "description": "任务栏状态同步 — 编辑器有未保存修改时任务栏标题旁显示 *，Agent PTY 持续输出时任务栏图标产生呼吸律动",
+      "acceptance": "编辑器修改后任务栏标题变 '文件名 *'，保存后 * 消失；Agent 输出期间对应任务栏条目颜色呼吸变化；无 Agent 输出时律动停止",
+      "depends_on": ["feat-004", "feat-006", "feat-008"],
+      "passes": false
+    },
+    {
+      "id": "feat-027",
+      "description": "吉祥物交互增强 — 点击吉祥物弹出快捷指令菜单，根据 Agent 响应速度或命令执行结果展示不同微表情",
+      "acceptance": "点击吉祥物弹出含常用命令的菜单；Agent 运行中吉祥物展示「工作」表情，成功展示「开心」，失败展示「困惑」；非点击区域点击关闭菜单",
+      "depends_on": ["feat-008", "feat-018"],
+      "passes": false
     }
   ]
 }
