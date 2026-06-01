@@ -15,6 +15,7 @@
 ---
 
 <!-- 新条目追加到这里（上方） -->
+[2026-06-01 14:52] DONE 工作台空状态金龙动画：保留原 TUICODE 块状字标，外圈加入红/橙/黄金龙摆动游动动画，256 tests passed → sessions/2026-06-01-1452.md
 [2026-06-01] DONE feat-025 浮窗拼贴模式：_tile_grid() ceil(sqrt(N)) 网格算法，apply_tiling/exit_tiling，Ctrl+\ toggle，253 tests passed
 
 [2026-06-01] DONE feat-024 状态栏增强：底栏加 Git 分支名 + 活动文件路径 + 焦点感知快捷键提示（编辑器/终端/文件树），253 tests passed
@@ -182,3 +183,5 @@
 [2026-05-29] DONE feat-015/016/017/018 Phase 2A 全部完成：Git stage/commit 闭环、布局预设 Ctrl+1/2/3、Agent 启动器 Modal、命令面板 Ctrl+Shift+P，172 tests passed → sessions/2026-05-29-build.md
 
 [2026-05-31] DONE 底部终端多 Tab 支持 + 状态栏版权区：TerminalStrip 升级多标签切换/新建/关闭，StatusBar 增加版权段，253 tests passed
+
+[2026-06-01] DONE GitHub 发布准备：英文 README.md（含截图）、README_CN.md（中文）、CONTRIBUTING.md、CHANGELOG.md v0.1.0、.github/ Issue/PR 模板，项目开源文件齐全

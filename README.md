@@ -1,80 +1,87 @@
 # TuiCode
 
-> 为终端编程智能体设计的统一 TUI 工作台
+> A unified TUI workbench designed for terminal AI coding agents
 
-把"编辑器 + 文件管理 + 多终端 + Git + 多智能体会话 + 工作区状态同步"整合为一致的终端原生体验，让**人 + 多个 AI 智能体**在同一个终端环境里协同工作。
+Unite "editor + file manager + multi-terminal + Git + multi-agent sessions + workspace state sync" into a coherent terminal-native experience — letting **humans and multiple AI agents** collaborate in the same terminal environment.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![Textual 0.60+](https://img.shields.io/badge/textual-0.60+-purple.svg)](https://textual.textualize.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
----
-
-## 是什么
-
-主流 IDE 把 AI 当成插件（Copilot 浮窗、Cursor 侧栏）。TuiCode 反过来：**编辑器、文件树、终端都是为了让智能体更好地工作而存在**。
-
-TuiCode 不接管智能体，而是承载成熟 CLI 智能体：Claude Code、Codex、Aider 等继续在 PTY 中运行自己的完整交互体系，TuiCode 负责把它们工作的项目状态可视化、同步和组织起来。
-
-| 维度 | 定位 |
-|------|------|
-| 形态 | 100% TUI，跑在任意终端模拟器中 |
-| 目标用户 | 使用 Claude Code / Codex / Aider 等 CLI 智能体的开发者 |
-| 核心价值 | 统一工作台——无需在编辑器、Git 工具、终端之间来回切换 |
-| 部署 | 单一命令，跨平台（Linux / macOS / WSL） |
-
-**不是什么**：不是 VSCode 复刻、不是终端模拟器、不是新的 AI 编程工具、不是窗口管理器。
+[中文文档](README_CN.md)
 
 ---
 
-## 功能
+## Screenshots
 
-- **混合布局**：工作单元（编辑器/智能体会话）浮窗化，全局工具（文件树/Git/终端）固定栅格化
-- **多智能体并行**：同时开启多个 PTY 会话（Claude Code、Codex、Aider、自定义命令），互不干扰焦点
-- **实时感知**：文件变化/Git 状态变化自动刷新，无需手动 reload
-- **Git 工作流**：内置 diff 预览（左右对比视图）、按文件 stage/unstage、commit 一键完成
-- **文件管理器**：新建 / 重命名 / 删除（带确认）/ 复制路径，直接在文件树操作
-- **命令面板**：`Ctrl+Shift+P` 全屏搜索命令，替代不稳定的下拉菜单
-- **布局预设**：`Ctrl+1` 编辑模式 / `Ctrl+2` 双 Agent 对比 / `Ctrl+3` 调试模式
-- **智能体状态可见**：底栏实时显示运行中 Agent 数量，窗口标题标注运行中/已结束/等待输入
+**Startup**
+
+![TuiCode startup screen](screenshot/tuicode.png)
+
+**Working interface** — multi-agent sessions · diff preview · file tree
+
+![TuiCode working interface](screenshot/screenShot.png)
 
 ---
 
-## 快速开始
+## What is TuiCode?
 
-**依赖**：Python 3.11+
+Mainstream IDEs treat AI as a plugin (Copilot sidebar, Cursor panel). TuiCode flips this: **the editor, file tree, and terminal exist to serve the agents — not the other way around**.
+
+TuiCode doesn't take over your agents. It *hosts* mature CLI agents: Claude Code, Codex, Aider, and others continue running their full interactive loops inside PTYs. TuiCode visualizes, syncs, and organizes the project state those agents work on.
+
+| Dimension | Position |
+|-----------|----------|
+| Form | 100% TUI — runs in any terminal emulator |
+| Target users | Developers using CLI agents like Claude Code / Codex / Aider |
+| Core value | Unified workbench — no more context-switching between editor, Git tools, and terminals |
+| Deployment | Single command, cross-platform (Linux / macOS / WSL) |
+
+**What it is NOT**: Not a VSCode clone, not a terminal emulator, not another AI coding tool, not a window manager.
+
+---
+
+## Features
+
+- **Hybrid layout**: Work units (editor/agent sessions) float freely; global tools (file tree/Git/terminal) stay fixed in a grid
+- **Parallel agents**: Run multiple PTY sessions simultaneously (Claude Code, Codex, Aider, custom commands) without focus conflicts
+- **Real-time awareness**: File changes and Git status auto-refresh — no manual reload needed
+- **Git workflow**: Built-in diff preview (side-by-side view), per-file stage/unstage, one-click commit
+- **File manager**: Create / rename / delete (with confirmation) / copy path — right in the file tree
+- **Command palette**: `Ctrl+Shift+P` full-screen command search, replacing unreliable dropdowns
+- **Layout presets**: `Ctrl+1` editor mode / `Ctrl+2` dual-agent comparison / `Ctrl+3` debug mode
+- **Agent status visibility**: Status bar shows live running-agent count; window titles indicate running / done / waiting-for-input
+
+---
+
+## Quick Start
+
+**Prerequisites**: Python 3.11+
 
 ```bash
-# 安装
+# Install
 pip install tuicode
 
-# 在项目目录启动
+# Launch in your project directory
 cd your-project
 tuicode
 ```
 
-**常用快捷键**：
+**Common keybindings**:
 
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+T` | 新建智能体会话（Claude / Codex / Aider / 自定义） |
-| `Ctrl+Shift+P` | 命令面板 |
-| `Ctrl+1 / 2 / 3` | 切换布局预设 |
-| `Alt+1 / 2 / 3` | 快速切换浮窗焦点 |
-| `Ctrl+S` | 保存当前文件 |
-| `Ctrl+Q` | 退出 |
-
----
-
-## 技术栈
-
-- **[Textual](https://textual.textualize.io/)** 0.60+ — TUI 框架
-- **[pyte](https://github.com/selectel/pyte)** — VT220 终端模拟器（PTY 输出渲染）
-- **PTY** — 承载 CLI 智能体完整交互体系
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+T` | New agent session (Claude Code / Codex / Aider / custom) |
+| `Ctrl+Shift+P` | Command palette |
+| `Ctrl+1 / 2 / 3` | Switch layout preset |
+| `Alt+1 / 2 / 3` | Quick-focus floating windows |
+| `Ctrl+\` | Toggle tile / float mode |
+| `Ctrl+S` | Save current file |
+| `Ctrl+Q` | Quit |
 
 ---
 
-## 从源码运行
+## Run from Source
 
 ```bash
 git clone https://github.com/wuguirong/tuicode.git
@@ -83,7 +90,7 @@ pip install -e ".[dev]"
 python -m tuicode
 ```
 
-运行测试：
+Run tests:
 
 ```bash
 PYTHONPATH=src pytest -q
@@ -91,24 +98,33 @@ PYTHONPATH=src pytest -q
 
 ---
 
-## 架构
+## Tech Stack
 
-详见 [docs/tuicode_architecture.md](docs/tuicode_architecture.md)。
-
-核心设计原则：
-- **智能体一等公民**：所有 UI 组件服务于智能体，而非把 AI 降级为浮窗插件
-- **事件总线**：模块间唯一通信通道（`FileOpened` / `FileModified` / `GitStatusChanged` / `AgentMessage` 等）
-- **工作区状态聚合器**：持续维护当前活动文件、选区、最近文件变化和 Git 状态
-- **协议驱动**：`AgentAdapter` Protocol 隔离具体智能体细节，宿主层不绑定任何 CLI 工具
+- **[Textual](https://textual.textualize.io/)** 0.60+ — TUI framework
+- **[pyte](https://github.com/selectel/pyte)** — VT220 terminal emulator (PTY output rendering)
+- **PTY** — Hosts CLI agents' complete interactive loops
 
 ---
 
-## 贡献
+## Architecture
 
-欢迎 Issue 和 PR。提交前请确保 `pytest -q` 全部通过。
+See [docs/tuicode_architecture.md](docs/tuicode_architecture.md) for details.
+
+Core design principles:
+
+- **Agents as first-class citizens**: All UI components serve the agents — AI is not demoted to a sidebar plugin
+- **Event bus**: The only inter-module communication channel (`FileOpened` / `FileModified` / `GitStatusChanged` / `AgentMessage` etc.)
+- **Workspace state aggregator**: Continuously maintains active file, selection, recent file changes, and Git status
+- **Protocol-driven**: `AgentAdapter` protocol isolates agent implementation details; the host layer doesn't bind to any specific CLI tool
 
 ---
 
-## 许可
+## Contributing
 
-[MIT](LICENSE) © 2026 深圳市玄熵智能科技有限责任公司
+Issues and PRs are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting.
+
+---
+
+## License
+
+[MIT](LICENSE) © 2026 Shenzhen Xuanshang Intelligence Technology Co., Ltd.
