@@ -185,3 +185,5 @@
 [2026-05-31] DONE 底部终端多 Tab 支持 + 状态栏版权区：TerminalStrip 升级多标签切换/新建/关闭，StatusBar 增加版权段，253 tests passed
 
 [2026-06-01] DONE GitHub 发布准备：英文 README.md（含截图）、README_CN.md（中文）、CONTRIBUTING.md、CHANGELOG.md v0.1.0、.github/ Issue/PR 模板，项目开源文件齐全
+
+[2026-06-01] DECISION PyPI 发布流程确认：补全 pyproject.toml 元数据（classifiers/keywords/urls/dev deps），发布步骤：python -m build → twine upload，先 TestPyPI 验证再正式发布

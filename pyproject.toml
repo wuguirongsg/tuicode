@@ -5,18 +5,44 @@ build-backend = "hatchling.build"
 [project]
 name = "tuicode"
 version = "0.1.0"
-description = "AI 编程智能体的 TUI 宿主环境"
+description = "A unified TUI workbench for terminal AI coding agents"
 readme = "README.md"
 license = { text = "MIT" }
-authors = [{ name = "深圳市玄熵智能科技有限责任公司" }]
+authors = [
+    { name = "Xuanshang Intelligence", email = "wuguirong@gmail.com" }
+]
 requires-python = ">=3.11"
+keywords = ["tui", "ai", "agent", "claude", "terminal", "textual", "coding"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development",
+    "Topic :: Terminals",
+]
 dependencies = [
     "textual[syntax]>=0.60.0",
     "pyte>=0.8.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/wuguirong/tuicode"
+Repository = "https://github.com/wuguirong/tuicode"
+"Bug Tracker" = "https://github.com/wuguirong/tuicode/issues"
+
 [project.scripts]
 tuicode = "tuicode.__main__:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tuicode"]
