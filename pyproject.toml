@@ -48,4 +48,17 @@ dev = [
 packages = ["src/tuicode"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/"]
+exclude = [
+    ".opencode/",
+    ".harness/",
+    ".claude/",
+    ".cursor/",
+    ".codex/",
+    ".crush/",
+    "screenshot/",
+    "demo/",
+    "tmp/",
+    "skills/",
+    "docs/",
+    "tests/",
+]
