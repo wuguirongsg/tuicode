@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from textual.app import ComposeResult
 from textual.reactive import reactive
 from textual.widget import Widget
@@ -29,6 +31,8 @@ class StatusBar(Widget):
     def __init__(self, version: str) -> None:
         super().__init__()
         self._version = version
+        self._branch: str = ""
+        self._active_path: str = ""
 
     def compose(self) -> ComposeResult:
         yield Static(id="sb-left")
@@ -43,6 +47,22 @@ class StatusBar(Widget):
     def watch_agent_count(self, count: int) -> None:
         self._refresh_left()
 
+    def set_branch(self, branch: str) -> None:
+        """更新 Git 分支名显示。"""
+        self._branch = branch
+        self._refresh_left()
+
+    def set_active_path(self, path: Path | None) -> None:
+        """更新当前活动文件路径显示。"""
+        if path is None:
+            self._active_path = ""
+        else:
+            try:
+                self._active_path = str(path.relative_to(Path.cwd()))
+            except ValueError:
+                self._active_path = path.name
+        self._refresh_left()
+
     def set_shortcuts(self, text: str | None) -> None:
         """切换右侧快捷键提示；传 None 恢复默认。"""
         self.query_one("#sb-right", Static).update(text or t("status.shortcuts"))
@@ -55,6 +75,9 @@ class StatusBar(Widget):
             agent_str = t("status.agents", n=n)
         else:
             agent_str = t("status.agents_pl", n=n)
-        self.query_one("#sb-left", Static).update(
-            f"TuiCode v{self._version}  {agent_str}"
-        )
+        parts = [f"TuiCode v{self._version}", agent_str]
+        if self._branch:
+            parts.append(f"⎇ {self._branch}")
+        if self._active_path:
+            parts.append(self._active_path)
+        self.query_one("#sb-left", Static).update("  ".join(parts))

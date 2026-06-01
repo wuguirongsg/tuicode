@@ -11,7 +11,7 @@ from tuicode import __version__
 from tuicode import clipboard as _clipboard_sys
 from tuicode.agent_memory import AgentSessionStore
 from tuicode.bus import default_bus
-from tuicode.events import FileModified, TerminalOutput
+from tuicode.events import FileModified, GitStatusChanged, TerminalOutput
 from tuicode.git_diff import GitDiffService
 from tuicode.git_status import GitStatusPoller
 from tuicode.i18n import get_lang, save_lang, t
@@ -27,6 +27,7 @@ from tuicode.ui.menu_bar import MenuBar
 from tuicode.ui.right_panel import RightPanel
 from tuicode.ui.status_bar import StatusBar
 from tuicode.ui.taskbar import WindowTaskBar
+from tuicode.ui.pty_terminal import PtyTerminal
 from tuicode.ui.terminal_strip import TerminalStrip
 from tuicode.ui.workspace import FloatWorkspace
 from tuicode.workspace_state import WorkspaceStateAggregator
@@ -115,6 +116,7 @@ class TuiCodeApp(App):
         self._agent_session_store = AgentSessionStore(".")
         self._unsubscribe_file_modified = None
         self._unsubscribe_terminal_output = None
+        self._unsubscribe_git_status = None
         self.set_interval(1.0, self._workspace_watcher.poll)
         self.set_interval(1.0, self._git_status_poller.poll)
         self._unsubscribe_file_modified = default_bus.subscribe(
@@ -125,6 +127,10 @@ class TuiCodeApp(App):
             TerminalOutput,
             self._on_terminal_output,
         )
+        self._unsubscribe_git_status = default_bus.subscribe(
+            GitStatusChanged,
+            self._on_git_status_changed,
+        )
 
     def on_unmount(self) -> None:
         if self._unsubscribe_file_modified is not None:
@@ -133,6 +139,9 @@ class TuiCodeApp(App):
         if self._unsubscribe_terminal_output is not None:
             self._unsubscribe_terminal_output()
             self._unsubscribe_terminal_output = None
+        if self._unsubscribe_git_status is not None:
+            self._unsubscribe_git_status()
+            self._unsubscribe_git_status = None
         if self._agent_output_idle_timer is not None:
             self._agent_output_idle_timer.stop()
             self._agent_output_idle_timer = None
@@ -196,6 +205,10 @@ class TuiCodeApp(App):
     def _refresh_agent_count(self) -> None:
         self.query_one(StatusBar).agent_count = len(self._agent_windows)
 
+    def _on_git_status_changed(self, event: GitStatusChanged) -> None:
+        if event.branch:
+            self.call_later(self.query_one(StatusBar).set_branch, event.branch)
+
     def _on_terminal_output(self, event: TerminalOutput) -> None:
         if event.session_id not in self._agent_sessions or not event.text:
             return
@@ -217,10 +230,23 @@ class TuiCodeApp(App):
     # ── 焦点上下文提示 ────────────────────────────────────────────────────────
 
     def on_descendant_focus(self, event) -> None:
-        # 文件树聚焦时在底栏显示文件操作快捷键，失焦切回默认
-        is_filetree = isinstance(event.widget, FileTree)
-        hint = t("status.filetree_hint") if is_filetree else None
-        self.query_one(StatusBar).set_shortcuts(hint)
+        widget = event.widget
+        status = self.query_one(StatusBar)
+        if isinstance(widget, FileTree):
+            status.set_shortcuts(t("status.filetree_hint"))
+        elif isinstance(widget, PtyTerminal):
+            status.set_shortcuts(t("status.terminal_hint"))
+        elif widget.__class__.__name__ == "TextArea":
+            # TextArea 位于 EditorWindow 内；向上找 EditorWindow 更新活动路径
+            status.set_shortcuts(t("status.editor_hint"))
+            ancestor = widget.parent
+            while ancestor is not None:
+                if isinstance(ancestor, EditorWindow):
+                    status.set_active_path(ancestor._path)
+                    break
+                ancestor = getattr(ancestor, "parent", None)
+        else:
+            status.set_shortcuts(None)
 
     # ── 系统剪贴板 (override Textual 内部剪贴板) ──────────────────────────────
 
@@ -269,9 +295,11 @@ class TuiCodeApp(App):
                 win._bring_to_top()
                 win.restore()
                 win.focus()
+                self.query_one(StatusBar).set_active_path(msg.path)
                 return
         ws = self.query_one(FloatWorkspace)
         await ws.open_window(EditorWindow(msg.path))
+        self.query_one(StatusBar).set_active_path(msg.path)
 
     async def on_right_panel_diff_requested(
         self, msg: RightPanel.DiffRequested
