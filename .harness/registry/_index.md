@@ -187,3 +187,5 @@
 [2026-06-01] DONE GitHub 发布准备：英文 README.md（含截图）、README_CN.md（中文）、CONTRIBUTING.md、CHANGELOG.md v0.1.0、.github/ Issue/PR 模板，项目开源文件齐全
 
 [2026-06-01] DECISION PyPI 发布流程确认：补全 pyproject.toml 元数据（classifiers/keywords/urls/dev deps），发布步骤：python -m build → twine upload，先 TestPyPI 验证再正式发布
+
+[2026-06-01] DONE PyPI 构建完成：修复 sdist 含 node_modules 问题（exclude 模式），dist/ 包从 3.3MB 降至 91KB，下一步 twine upload 发布
