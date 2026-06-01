@@ -15,6 +15,8 @@
 ---
 
 <!-- 新条目追加到这里（上方） -->
+[2026-06-01] DONE feat-025 浮窗拼贴模式：_tile_grid() ceil(sqrt(N)) 网格算法，apply_tiling/exit_tiling，Ctrl+\ toggle，253 tests passed
+
 [2026-06-01] DONE feat-024 状态栏增强：底栏加 Git 分支名 + 活动文件路径 + 焦点感知快捷键提示（编辑器/终端/文件树），253 tests passed
 
 [2026-06-01] DONE feat-023 右栏动态调宽：RightPanel 左侧加 _PanelResizeHandle，改水平布局，支持 20~60 列拖拽调宽，253 tests passed
