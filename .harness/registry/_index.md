@@ -193,3 +193,5 @@
 [2026-06-01] DONE CI/CD：添加 GitHub Actions 自动发布 workflow，打 v* tag 触发，Trusted Publishing（OIDC）无需存 token，需在 PyPI 网站配置一次 publisher
 
 [2026-06-01] FIX git pull 分叉问题：GitHub 建仓时初始化了 README 导致历史分叉，解决方案 git pull --rebase github master
+
+[2026-06-01] DECISION PyPI 自动发布流程确认：PyPI Trusted Publishing 配置（owner=wuguirongsg, repo=tuicode, workflow=publish.yml, env=pypi）+ GitHub Environment "pypi" → 之后 git tag v* + push 自动触发发布
