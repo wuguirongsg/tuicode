@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from rich.markup import escape
 from textual.app import ComposeResult
 from textual.message import Message
 from textual.widget import Widget
@@ -118,18 +119,187 @@ def _preset_positions(preset: int, count: int, ws_w: int, ws_h: int) -> list[tup
 
     return positions
 
-_BANNER = (
-    "[bold #00d4ff]████████╗██╗   ██╗██╗  ██████╗  ██████╗ ██████╗ ███████╗[/]\n"
-    "[bold #00d4ff]   ██╔══╝██║   ██║██║ ██╔════╝ ██╔═══██╗██╔══██╗██╔════╝[/]\n"
-    "[bold #00b8d9]   ██║   ██║   ██║██║ ██║      ██║   ██║██║  ██║█████╗  [/]\n"
-    "[bold #00b8d9]   ██║   ╚██████╔╝██║ ╚██████╗ ╚██████╔╝██████╔╝███████╗[/]\n"
-    "[bold #0097ba]   ╚═╝    ╚═════╝ ╚═╝  ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝[/]"
+_BANNER_LINES = (
+    "████████╗██╗   ██╗██╗  ██████╗  ██████╗ ██████╗ ███████╗",
+    "   ██╔══╝██║   ██║██║ ██╔════╝ ██╔═══██╗██╔══██╗██╔════╝",
+    "   ██║   ██║   ██║██║ ██║      ██║   ██║██║  ██║█████╗  ",
+    "   ██║   ╚██████╔╝██║ ╚██████╗ ╚██████╔╝██████╔╝███████╗",
+    "   ╚═╝    ╚═════╝ ╚═╝  ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝",
+)
+
+_BANNER_COLORS = ("#00d4ff", "#00d4ff", "#00b8d9", "#00b8d9", "#0097ba")
+_DRAGON_MARGIN_X = 6
+_DRAGON_MARGIN_Y = 2
+_DRAGON_BODY = ("@", "}", "~", "~", "S", "~", "~", "s", "~", "=", "-", "~", "*", ".")
+_DRAGON_COLORS = (
+    "#fff3b0",
+    "#ffe66d",
+    "#ffd166",
+    "#ffb703",
+    "#fb8500",
+    "#ff6b35",
+    "#ff3b30",
 )
 
 _ROBOT_FRAMES = [
     "[#00d4ff]  ╭───╮\n  │◉ ◉│\n  ╰─┬─╯\n    ┴[/]",
     "[#00ff41]  ╭───╮\n  │● ●│\n  ╰─┬─╯\n    ┴[/]",
 ]
+
+
+def _padded_banner_lines() -> list[str]:
+    width = max(len(line) for line in _BANNER_LINES)
+    return [line.ljust(width) for line in _BANNER_LINES]
+
+
+def _dragon_orbit_path(width: int, height: int) -> list[tuple[int, int]]:
+    """Return clockwise (row, col) points around a rectangular banner orbit."""
+    if width < 4 or height < 3:
+        return []
+
+    top = 0
+    bottom = height - 1
+    left = 1
+    right = width - 2
+
+    path: list[tuple[int, int]] = []
+    path.extend((top, col) for col in range(left, right + 1))
+    path.extend((row, right) for row in range(top + 1, bottom + 1))
+    path.extend((bottom, col) for col in range(right - 1, left - 1, -1))
+    path.extend((row, left) for row in range(bottom - 1, top, -1))
+    return path
+
+
+def _dragon_point(
+    path: list[tuple[int, int]], tick: int, index: int
+) -> tuple[int, int]:
+    """Position one dragon segment with a small perpendicular swimming sway."""
+    path_len = len(path)
+    path_index = (tick * 2 - index) % path_len
+    prev_row, prev_col = path[(path_index - 1) % path_len]
+    row, col = path[path_index]
+    next_row, next_col = path[(path_index + 1) % path_len]
+    wiggle = round(math.sin((tick * 0.85) + (index * 0.9)))
+
+    if next_col != prev_col:
+        row += wiggle
+    else:
+        col += wiggle
+    return row, col
+
+
+def _dragon_head_char(current: tuple[int, int], next_point: tuple[int, int]) -> str:
+    row, col = current
+    next_row, next_col = next_point
+    if next_col > col:
+        return ">"
+    if next_col < col:
+        return "<"
+    if next_row > row:
+        return "v"
+    return "^"
+
+
+def _nudge_off_banner(
+    row: int, col: int, occupied: set[tuple[int, int]], height: int, width: int
+) -> tuple[int, int]:
+    """Keep the dragon readable without damaging the original ASCII logo."""
+    if (row, col) not in occupied:
+        return row, col
+
+    center_row = height // 2
+    center_col = width // 2
+    candidates = (
+        (row - 1 if row <= center_row else row + 1, col),
+        (row, col - 1 if col <= center_col else col + 1),
+        (row + 1 if row <= center_row else row - 1, col),
+        (row, col + 1 if col <= center_col else col - 1),
+    )
+    for next_row, next_col in candidates:
+        if (
+            0 <= next_row < height
+            and 0 <= next_col < width
+            and (next_row, next_col) not in occupied
+        ):
+            return next_row, next_col
+    return row, col
+
+
+def _render_dragon_banner(tick: int) -> str:
+    """Render the original idle banner with a gold dragon swimming around it."""
+    banner_lines = _padded_banner_lines()
+    banner_width = len(banner_lines[0])
+    width = banner_width + _DRAGON_MARGIN_X * 2
+    height = len(banner_lines) + _DRAGON_MARGIN_Y * 2
+
+    cells = [[" " for _ in range(width)] for _ in range(height)]
+    styles: dict[tuple[int, int], str] = {}
+    occupied: set[tuple[int, int]] = set()
+
+    for line_index, line in enumerate(banner_lines):
+        row_index = line_index + _DRAGON_MARGIN_Y
+        for col_index, char in enumerate(line, start=_DRAGON_MARGIN_X):
+            if char == " ":
+                continue
+            color = _BANNER_COLORS[line_index]
+            cells[row_index][col_index] = char
+            styles[(row_index, col_index)] = f"bold {color}"
+            occupied.add((row_index, col_index))
+
+    path = _dragon_orbit_path(width, height)
+    if path:
+        for index in range(len(_DRAGON_BODY) - 1, -1, -1):
+            row, col = _dragon_point(path, tick, index)
+            row = max(0, min(height - 1, row))
+            col = max(0, min(width - 1, col))
+            row, col = _nudge_off_banner(row, col, occupied, height, width)
+            if index == 0:
+                next_point = _dragon_point(path, tick + 1, index)
+                char = _dragon_head_char(
+                    (row, col),
+                    next_point,
+                )
+            else:
+                char = _DRAGON_BODY[index]
+            cells[row][col] = char
+            color = _DRAGON_COLORS[index % len(_DRAGON_COLORS)]
+            styles[(row, col)] = f"bold {color}"
+
+    lines: list[str] = []
+    for row, line in enumerate(cells):
+        rendered = []
+        for col, char in enumerate(line):
+            style = styles.get((row, col))
+            if style is None:
+                rendered.append(char)
+            else:
+                rendered.append(f"[{style}]{escape(char)}[/]")
+        lines.append("".join(rendered).rstrip())
+    return "\n".join(lines)
+
+
+class _DragonBannerWidget(Static):
+    DEFAULT_CSS = """
+    _DragonBannerWidget {
+        width: auto;
+        height: auto;
+    }
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__("", **kwargs)
+        self._tick_count = 0
+
+    def on_mount(self) -> None:
+        self._refresh_banner()
+        self.set_interval(0.16, self._tick)
+
+    def _tick(self) -> None:
+        self._tick_count += 1
+        self._refresh_banner()
+
+    def _refresh_banner(self) -> None:
+        self.update(_render_dragon_banner(self._tick_count))
 
 
 class _RobotWidget(Widget):
@@ -185,7 +355,7 @@ class _CyberpunkHint(Widget):
     """
 
     def compose(self) -> ComposeResult:
-        yield Static(_BANNER, id="ws-banner")
+        yield _DragonBannerWidget(id="ws-banner")
         yield _RobotWidget()
         yield Static(
             "[dim #bf00ff]┄┄┄┄┄ AI-Native Terminal IDE ┄┄┄┄┄[/]",

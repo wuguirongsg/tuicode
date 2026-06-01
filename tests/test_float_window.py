@@ -3,10 +3,17 @@ from __future__ import annotations
 
 import asyncio
 
+from rich.markup import render
 from textual.app import App, ComposeResult
 
 from tuicode.ui.float_window import FloatWindow, ResizeHandle
-from tuicode.ui.workspace import FloatWorkspace
+from tuicode.ui.workspace import (
+    FloatWorkspace,
+    _BANNER_LINES,
+    _dragon_point,
+    _dragon_orbit_path,
+    _render_dragon_banner,
+)
 
 
 # ── 测试 App 骨架 ─────────────────────────────────────────────────────────────
@@ -212,6 +219,29 @@ class TestFloatWorkspace:
                 assert len(pilot.app.query(FloatWindow)) == 3
 
         asyncio.run(run())
+
+    def test_dragon_banner_animates_around_logo(self):
+        frame_0 = _render_dragon_banner(0)
+        frame_1 = _render_dragon_banner(1)
+        plain_0 = render(frame_0).plain
+
+        assert frame_0 != frame_1
+        assert _BANNER_LINES[0].strip() in plain_0
+        assert "#fff3b0" in frame_0
+        assert any(head in plain_0 for head in (">", "<", "^", "v"))
+
+    def test_dragon_orbit_path_stays_on_outer_rect(self):
+        path = _dragon_orbit_path(width=12, height=5)
+
+        assert path
+        assert all(row in (0, 4) or col in (1, 10) for row, col in path)
+
+    def test_dragon_segments_sway_while_swimming(self):
+        path = _dragon_orbit_path(width=70, height=9)
+        segment_at_tick_0 = _dragon_point(path, tick=0, index=3)
+        segment_at_tick_2 = _dragon_point(path, tick=2, index=3)
+
+        assert segment_at_tick_0 != segment_at_tick_2
 
     def test_hint_hides_when_window_opens(self):
         async def run():
