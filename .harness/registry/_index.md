@@ -189,3 +189,5 @@
 [2026-06-01] DECISION PyPI 发布流程确认：补全 pyproject.toml 元数据（classifiers/keywords/urls/dev deps），发布步骤：python -m build → twine upload，先 TestPyPI 验证再正式发布
 
 [2026-06-01] DONE PyPI 构建完成：修复 sdist 含 node_modules 问题（exclude 模式），dist/ 包从 3.3MB 降至 91KB，下一步 twine upload 发布
+
+[2026-06-01] DONE CI/CD：添加 GitHub Actions 自动发布 workflow，打 v* tag 触发，Trusted Publishing（OIDC）无需存 token，需在 PyPI 网站配置一次 publisher
