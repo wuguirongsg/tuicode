@@ -191,3 +191,5 @@
 [2026-06-01] DONE PyPI 构建完成：修复 sdist 含 node_modules 问题（exclude 模式），dist/ 包从 3.3MB 降至 91KB，下一步 twine upload 发布
 
 [2026-06-01] DONE CI/CD：添加 GitHub Actions 自动发布 workflow，打 v* tag 触发，Trusted Publishing（OIDC）无需存 token，需在 PyPI 网站配置一次 publisher
+
+[2026-06-01] FIX git pull 分叉问题：GitHub 建仓时初始化了 README 导致历史分叉，解决方案 git pull --rebase github master
