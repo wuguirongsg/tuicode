@@ -15,6 +15,12 @@
 ---
 
 <!-- 新条目追加到这里（上方） -->
+[2026-06-01] DONE feat-023 右栏动态调宽：RightPanel 左侧加 _PanelResizeHandle，改水平布局，支持 20~60 列拖拽调宽，253 tests passed
+
+[2026-06-01] DONE feat-022 Diff 预览自适应重绘：DiffPreviewWindow 监听 Resize 重算 split 布局 + Ctrl+U/D 翻页，253 tests passed
+
+[2026-06-01] PLAN Phase 3 — UI/UX 打磨：feat-022~feat-027，P0 Diff 重绘/右栏调宽，P1 状态栏增强/拼贴模式，P2 任务栏同步，P3 吉祥物增强
+
 [2026-06-01] DISCOVER 架构文档 vs 代码库差异分析：扫描全部 15 个顶层模块 + 17 个 UI 组件，识别出 19 项架构文档描述但代码库缺失/仅存桩的功能（含 Agent Adapter 深度集成、MCP Bridge、工具调用审批、LSP、文件搜索、插件系统、配置系统、拼贴模式、工具栏折叠、全屏等 Phase 2+ 特性），所有 feat-001 至 feat-021 均 passes=true
 
 [2026-05-31 15:25] DECISION Windows 原生兼容方案：确认原生 Windows 无法运行（fcntl/termios 顶层 import + PTY 全链 POSIX-only），提出 PTY 后端抽象（PosixPtyBackend / WindowsPtyBackend via pywinpty ConPTY）+ 剪贴板后端 + 默认 shell 按平台；P3 延后，现阶段推荐 WSL → decisions/2026-05-31-windows-compat.md
