@@ -15,6 +15,7 @@
 ---
 
 <!-- 新条目追加到这里（上方） -->
+[2026-06-03] DONE feat-026 任务栏状态同步：FloatWindow.TitleChanged 事件驱动 * 标记刷新，AgentTerminalWindow.OutputReceived 驱动 0.4s 呼吸律动（青色），260 tests passed
 [2026-06-01 14:52] DONE 工作台空状态金龙动画：保留原 TUICODE 块状字标，外圈加入红/橙/黄金龙摆动游动动画，256 tests passed → sessions/2026-06-01-1452.md
 [2026-06-01] DONE feat-025 浮窗拼贴模式：_tile_grid() ceil(sqrt(N)) 网格算法，apply_tiling/exit_tiling，Ctrl+\ toggle，253 tests passed
 
