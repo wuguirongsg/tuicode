@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import time
+
 from textual.app import ComposeResult
 from textual.message import Message
+from textual.timer import Timer
 from textual.widget import Widget
 from textual.widgets import Static
 
 from tuicode.i18n import t
+
+_PULSE_INTERVAL = 0.4   # 呼吸半周期（秒）
+_PULSE_TIMEOUT  = 2.0   # 无输出超过此值停止律动
 
 
 class TaskButton(Widget):
@@ -27,11 +33,15 @@ class TaskButton(Widget):
     }
     TaskButton:hover { background: $surface; color: $text; }
     TaskButton.minimized { color: $text-disabled; text-style: italic; }
+    TaskButton.pulsing { color: #00d4ff; text-style: bold; }
     """
 
     def __init__(self, window: object, **kwargs) -> None:
         super().__init__(**kwargs)
         self._window = window
+        self._pulse_timer: Timer | None = None
+        self._pulse_phase: int = 0
+        self._last_output_time: float = 0.0
 
     def render(self) -> str:
         win = self._window
@@ -47,6 +57,32 @@ class TaskButton(Widget):
         else:
             self.remove_class("minimized")
         self.refresh()
+
+    def start_pulse(self) -> None:
+        """记录输出时间并确保呼吸定时器运行。"""
+        self._last_output_time = time.monotonic()
+        if self._pulse_timer is None:
+            self._pulse_timer = self.set_interval(_PULSE_INTERVAL, self._pulse_tick)
+
+    def _pulse_tick(self) -> None:
+        if time.monotonic() - self._last_output_time > _PULSE_TIMEOUT:
+            self._stop_pulse()
+            return
+        self._pulse_phase ^= 1
+        if self._pulse_phase:
+            self.add_class("pulsing")
+        else:
+            self.remove_class("pulsing")
+
+    def _stop_pulse(self) -> None:
+        if self._pulse_timer is not None:
+            self._pulse_timer.stop()
+            self._pulse_timer = None
+        self._pulse_phase = 0
+        self.remove_class("pulsing")
+
+    def on_unmount(self) -> None:
+        self._stop_pulse()
 
     def on_click(self) -> None:
         self.post_message(self.Activated(self._window))
@@ -93,6 +129,12 @@ class WindowTaskBar(Widget):
         btn = self._buttons.get(id(window))
         if btn:
             btn.refresh_state()
+
+    def pulse_window(self, window: object) -> None:
+        """触发对应窗口任务栏按钮的呼吸律动。"""
+        btn = self._buttons.get(id(window))
+        if btn:
+            btn.start_pulse()
 
     def on_task_button_activated(self, msg: TaskButton.Activated) -> None:
         msg.stop()

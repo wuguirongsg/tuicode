@@ -257,3 +257,116 @@ class TestDragBoundary:
                 assert actual_y >= 0
 
         asyncio.run(run())
+
+
+# ── feat-026 任务栏状态同步测试 ───────────────────────────────────────────────
+
+
+class TitleApp(App):
+    """测试 FloatWindow.TitleChanged 能触发任务栏刷新。"""
+
+    def compose(self) -> ComposeResult:
+        yield WindowTaskBar()
+        yield FloatWorkspace()
+
+    async def on_float_workspace_window_opened(
+        self, msg: FloatWorkspace.WindowOpened
+    ) -> None:
+        await self.query_one(WindowTaskBar).add_window(msg.window)
+
+    def on_float_window_title_changed(self, msg: FloatWindow.TitleChanged) -> None:
+        self.query_one(WindowTaskBar).update_window(msg.window)
+
+
+class TestFeat026:
+    def test_title_changed_message_fires_on_title_update(self):
+        """FloatWindow._refresh_border 在标题变化时发出 TitleChanged 消息。"""
+        received: list[str] = []
+
+        async def run():
+            class _App(TitleApp):
+                def on_float_window_title_changed(
+                    self, msg: FloatWindow.TitleChanged
+                ) -> None:
+                    received.append(msg.window._title)
+                    super().on_float_window_title_changed(msg)
+
+            async with _App().run_test(headless=True, size=(80, 24)) as pilot:
+                ws = pilot.app.query_one(FloatWorkspace)
+                win = await ws.open_window(FloatWindow("original", x=4, y=2))
+                await pilot.pause()
+
+                win._title = "modified"
+                win._refresh_border()
+                await pilot.pause()
+
+                assert "modified" in received
+
+        asyncio.run(run())
+
+    def test_title_changed_not_fired_when_title_unchanged(self):
+        """同一标题重复调用 _refresh_border 不重复发消息。"""
+        count: list[int] = [0]
+
+        async def run():
+            class _App(TitleApp):
+                def on_float_window_title_changed(
+                    self, msg: FloatWindow.TitleChanged
+                ) -> None:
+                    count[0] += 1
+                    super().on_float_window_title_changed(msg)
+
+            async with _App().run_test(headless=True, size=(80, 24)) as pilot:
+                ws = pilot.app.query_one(FloatWorkspace)
+                win = await ws.open_window(FloatWindow("same", x=4, y=2))
+                await pilot.pause()
+
+                before = count[0]
+                win._refresh_border()
+                win._refresh_border()
+                await pilot.pause()
+
+                assert count[0] == before
+
+        asyncio.run(run())
+
+    def test_taskbar_shows_dirty_star_in_title(self):
+        """编辑器修改后任务栏按钮的 render 文字包含 *。"""
+
+        async def run():
+            async with FullApp().run_test(headless=True, size=(80, 24)) as pilot:
+                ws = pilot.app.query_one(FloatWorkspace)
+                win = await ws.open_window(FloatWindow("hello.py", x=4, y=2))
+                await pilot.pause()
+
+                tb = pilot.app.query_one(WindowTaskBar)
+                btn = tb._buttons.get(id(win))
+                assert btn is not None
+
+                win._title = "*hello.py"
+                win._refresh_border()
+                await pilot.pause()
+
+                rendered = btn.render()
+                assert "*hello.py" in rendered
+
+        asyncio.run(run())
+
+    def test_pulse_window_starts_pulse_on_button(self):
+        """pulse_window 调用后按钮拥有活跃的 _pulse_timer。"""
+
+        async def run():
+            async with FullApp().run_test(headless=True, size=(80, 24)) as pilot:
+                ws = pilot.app.query_one(FloatWorkspace)
+                win = await ws.open_window(FloatWindow("agent", x=4, y=2))
+                await pilot.pause()
+
+                tb = pilot.app.query_one(WindowTaskBar)
+                tb.pulse_window(win)
+                await pilot.pause()
+
+                btn = tb._buttons.get(id(win))
+                assert btn is not None
+                assert btn._pulse_timer is not None
+
+        asyncio.run(run())

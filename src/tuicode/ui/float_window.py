@@ -109,6 +109,11 @@ class FloatWindow(Widget):
             self.window = window
             self.is_minimized = is_minimized
 
+    class TitleChanged(Message):
+        def __init__(self, window: "FloatWindow") -> None:
+            super().__init__()
+            self.window = window
+
     DEFAULT_WIDTH = 60
     DEFAULT_HEIGHT = 20
     MIN_WIDTH = 20
@@ -162,6 +167,7 @@ class FloatWindow(Widget):
         self._drag_last: Offset = Offset(0, 0)
         self._marquee_timer = None
         self._marquee_tick: int = 0
+        self._last_broadcast_title: str = title
 
     def compose(self) -> ComposeResult:
         with Widget(id="win-body"):
@@ -188,6 +194,9 @@ class FloatWindow(Widget):
             f"[#ff5f57 bold]●[/] [#febc2e bold]●[/] [#28c840 bold]●[/]  {title}"
         )
         self.styles.border = ("round", self._border_color)
+        if self._title != self._last_broadcast_title:
+            self._last_broadcast_title = self._title
+            self.post_message(self.TitleChanged(self))
 
     # ── 跑马灯动画（按侧渐变 + 彩虹色相）────────────────────────────────────────
     # 四条边顺时针：上=青 右=紫 下=粉 左=绿，光头扫过时亮起，拖尾渐暗

@@ -191,6 +191,14 @@ class TuiCodeApp(App):
     ) -> None:
         self.query_one(WindowTaskBar).update_window(msg.window)
 
+    def on_float_window_title_changed(self, msg: FloatWindow.TitleChanged) -> None:
+        self.query_one(WindowTaskBar).update_window(msg.window)
+
+    def on_agent_terminal_window_output_received(
+        self, msg: AgentTerminalWindow.OutputReceived
+    ) -> None:
+        self.query_one(WindowTaskBar).pulse_window(msg.window)
+
     def on_agent_terminal_window_status_changed(
         self, msg: AgentTerminalWindow.StatusChanged
     ) -> None:
