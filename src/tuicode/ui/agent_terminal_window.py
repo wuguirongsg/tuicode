@@ -36,10 +36,16 @@ class AgentTerminalWindow(FloatWindow):
 
     class StatusChanged(Message):
         """PTY 子进程运行状态发生变化（运行 ↔ 结束）。"""
-        def __init__(self, window: "AgentTerminalWindow", is_running: bool) -> None:
+        def __init__(
+            self,
+            window: "AgentTerminalWindow",
+            is_running: bool,
+            exit_code: int | None = None,
+        ) -> None:
             super().__init__()
             self.window = window
             self.is_running = is_running
+            self.exit_code = exit_code
 
     class OutputReceived(Message):
         """Agent PTY 会话产生输出。"""
@@ -124,7 +130,15 @@ class AgentTerminalWindow(FloatWindow):
         self._status_running = running
         self._title = self._titled(running)
         self._refresh_border()
-        self.post_message(self.StatusChanged(self, running))
+        exit_code: int | None = None
+        if not running:
+            try:
+                proc = self.query_one(PtyTerminal)._process
+                if proc is not None:
+                    exit_code = proc.returncode
+            except Exception:
+                pass
+        self.post_message(self.StatusChanged(self, running, exit_code))
 
     def _send_continuation_prompt(self) -> None:
         self._continuation_timer = None

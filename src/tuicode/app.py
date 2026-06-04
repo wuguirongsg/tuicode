@@ -210,6 +210,8 @@ class TuiCodeApp(App):
                 status="ended",
                 scrollback_text=msg.window.get_session_text(),
             )
+            mascot_state = "error" if (msg.exit_code is not None and msg.exit_code != 0) else "success"
+            self.query_one(RightPanel).set_mascot_state(mascot_state, auto_reset=3.0)
 
     def _refresh_agent_count(self) -> None:
         self.query_one(StatusBar).agent_count = len(self._agent_windows)

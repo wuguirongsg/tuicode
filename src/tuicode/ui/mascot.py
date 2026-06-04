@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from rich.markup import escape
+from textual.events import Click
 from textual.timer import Timer
 from textual.widget import Widget
 from textual.widgets import Static
@@ -285,6 +286,10 @@ class MascotPanel(Widget):
 
         self.query_one("#mp-art", Static).update(art)
         self.query_one("#mp-label", Static).update(label)
+
+    def on_click(self, event: Click) -> None:
+        event.stop()
+        self.app.action_command_palette()
 
     def set_state(self, state: str, auto_reset: float = 0.0) -> None:
         """切换状态；auto_reset > 0 则指定秒后自动回到 idle。"""
