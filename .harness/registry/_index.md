@@ -203,3 +203,5 @@
 [2026-06-01] DONE v0.1.0 发布：PyPI Trusted Publishing 配置完成，tag v0.1.0 已推送 GitHub，Actions 自动触发发布到 PyPI
 
 [2026-06-01] CONSTRAINT Linux 安装兼容性：pip install tuicode 成功，但 textual-8.2.7 被安装（开发基于 0.60+），Textual 大版本跨越可能有 API 破坏性变更，需收紧依赖上限或验证 8.x 兼容性
+
+[2026-06-29] FIX DirectoryTree 大目录 CPU 飙升：覆盖 filter_paths 过滤 target/node_modules/.git 等 13 个目录，inknode 项目 CPU 从 99% 降至正常，16 tests passed
