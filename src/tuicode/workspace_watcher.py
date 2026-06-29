@@ -1,6 +1,7 @@
 """Workspace file change watcher for external edits."""
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,15 +10,15 @@ from tuicode.events import FileModified
 
 
 _IGNORED_DIRS = {
-    ".git",
-    ".hg",
-    ".svn",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
-    ".venv",
-    "__pycache__",
-    "node_modules",
+    # VCS
+    ".git", ".hg", ".svn",
+    # Python
+    ".venv", "__pycache__", ".mypy_cache", ".pytest_cache", ".ruff_cache",
+    ".tox", ".eggs", "dist", "build",
+    # JS / Node
+    "node_modules", ".next", ".nuxt", ".angular",
+    # Rust / Java / others
+    "target", ".gradle", "out", "coverage",
 }
 
 
@@ -69,22 +70,17 @@ class WorkspaceWatcher:
         if not self.root.exists():
             return files
 
-        for path in self.root.rglob("*"):
-            if self._is_ignored(path) or not path.is_file():
-                continue
-            try:
-                stat = path.stat()
-            except OSError:
-                continue
-            files[path.resolve()] = FileSignature(
-                mtime_ns=stat.st_mtime_ns,
-                size=stat.st_size,
-            )
+        for dirpath, dirnames, filenames in os.walk(self.root):
+            # Prune ignored dirs in-place: os.walk won't descend into them
+            dirnames[:] = [d for d in dirnames if d not in self._ignored_dirs]
+            for filename in filenames:
+                full_path = Path(dirpath) / filename
+                try:
+                    stat = full_path.stat()
+                except OSError:
+                    continue
+                files[full_path.resolve()] = FileSignature(
+                    mtime_ns=stat.st_mtime_ns,
+                    size=stat.st_size,
+                )
         return files
-
-    def _is_ignored(self, path: Path) -> bool:
-        try:
-            relative = path.relative_to(self.root)
-        except ValueError:
-            return True
-        return any(part in self._ignored_dirs for part in relative.parts)
