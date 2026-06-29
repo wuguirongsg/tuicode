@@ -100,3 +100,5 @@
 [2026-05-28] Textual 8.x 不原生支持传统下拉菜单 — vertical layout 强制子 widget 占满父容器宽度；layer/layers 机制在完整 App 的 CSS 层叠环境中行为不稳定（孤立脚本有效，完整 App 中 width 约束被覆盖）。结论：菜单栏保持静态占位，后续用命令面板（Ctrl+Shift+P，全屏模态）替代所有菜单入口，规划至 Phase 2。
 
 [2026-05-28] Textual TextArea 语法高亮依赖 `textual[syntax]` 的 tree-sitter extras；启用后只能传内置支持的语言名，未内置的 `diff` / `typescript` 等必须回退纯文本或单独注册 parser/query，否则会在打开 TextArea 时抛错。
+
+[2026-06-29] WorkspaceWatcher 在大型项目（Rust/Java/JS 多 build 产物目录）下严重卡顿 — `_scan()` 用 `rglob("*")` 全量递归，`_IGNORED_DIRS` 没有 `target`（Rust 编译产物），导致在 inknode（target/ = 30GB）中扫描 10 万+文件耗时 5+ 秒，且每秒轮询一次、在主线程同步执行，UI 完全冻结。修复：① `_IGNORED_DIRS` 补 `target / dist / build / .next / .nuxt / .gradle`；② `poll()` 改为线程执行，不阻塞 Textual 事件循环。
