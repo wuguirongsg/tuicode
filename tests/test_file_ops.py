@@ -302,3 +302,32 @@ def test_enter_on_file_opens(tmp_path: Path):
             assert pilot.app.opened[0].name == "a.py"
 
     _run(body)
+
+
+def test_filter_paths_excludes_heavy_dirs(tmp_path: Path):
+    """filter_paths 过滤掉 target/node_modules/.git 等大目录。"""
+    (tmp_path / "main.rs").touch()
+    (tmp_path / "target").mkdir()
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "src").mkdir()
+
+    from tuicode.ui.file_tree import FileTree, _EXCLUDED_DIRS
+    from pathlib import Path as P
+
+    paths = [
+        tmp_path / "main.rs",
+        tmp_path / "target",
+        tmp_path / "node_modules",
+        tmp_path / ".git",
+        tmp_path / "src",
+    ]
+
+    # 不需要启动 App，直接调用过滤逻辑
+    tree = FileTree.__new__(FileTree)
+    result = list(tree.filter_paths(paths))
+    names = {p.name for p in result}
+    assert "main.rs" in names
+    assert "src" in names
+    for excluded in _EXCLUDED_DIRS:
+        assert excluded not in names, f"{excluded} should be filtered"

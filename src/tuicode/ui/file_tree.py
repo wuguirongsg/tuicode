@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Iterable
 
 from textual import events
 from textual.widgets import DirectoryTree
@@ -18,12 +19,32 @@ from tuicode.events import FileModified
 from tuicode.i18n import t
 from tuicode.ui.file_modals import ConfirmDeleteModal, TextPromptModal
 
+# 过滤掉常见的大型/编译输出目录，避免 DirectoryTree 扫描导致 CPU 飙升
+_EXCLUDED_DIRS = frozenset({
+    "target",        # Rust
+    "node_modules",  # Node.js
+    ".git",
+    "__pycache__",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".pytest_cache",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+    ".tox",
+    ".eggs",
+})
+
 
 class FileTree(DirectoryTree):
     """带文件操作快捷键的文件树。聚焦时可用：
 
     a 新建文件 · A 新建文件夹 · r 重命名 · d 删除 · y 复制绝对路径 · Y 复制相对路径
     """
+
+    def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
+        return (p for p in paths if p.name not in _EXCLUDED_DIRS)
 
     BINDINGS = [
         ("a", "new_file", "新建文件"),
