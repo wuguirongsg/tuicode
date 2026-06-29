@@ -15,6 +15,7 @@
 ---
 
 <!-- 新条目追加到这里（上方） -->
+[2026-06-29 10:30] FIX WorkspaceWatcher 大型项目卡顿：_scan() 改 os.walk+dirnames 剪枝，_IGNORED_DIRS 补 target/dist/build/.next/.gradle，248 tests passed
 [2026-06-29 10:00] VERIFY WorkspaceWatcher 大型项目卡顿根因：_IGNORED_DIRS 缺 target/，rglob 扫描 30GB Rust 产物，每秒阻塞主线程 5s+；已记录修复方案到 backlog.md 约束区
 [2026-06-04] DONE feat-027 吉祥物交互增强：点击弹出命令面板；Agent 退出码 0→success/非 0→error 微表情（3s 后回 idle）；StatusChanged 新增可选 exit_code 字段，260 tests passed
 [2026-06-03] DONE feat-026 任务栏状态同步：FloatWindow.TitleChanged 事件驱动 * 标记刷新，AgentTerminalWindow.OutputReceived 驱动 0.4s 呼吸律动（青色），260 tests passed
